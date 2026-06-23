@@ -1444,7 +1444,7 @@ function renderFullRiskMarkup(risk) {
           >
             ${renderBookmarkIcon()}
           </button>
-          <div class="note-button-wrapper">
+          ${noteEditorOpen ? `<div class="note-button-wrapper">
             <button
               class="note-button ${note ? "has-note" : ""} ${noteEditorOpen ? "is-open" : ""}"
               type="button"
@@ -1455,7 +1455,7 @@ function renderFullRiskMarkup(risk) {
               ${renderNoteIcon()}
             </button>
             ${note ? `<div class="note-tooltip">${escapeHtml(note)}</div>` : ""}
-          </div>
+          </div>` : ""}
           <div class="risk-more-menu">
             <button class="more-button" type="button" data-more-menu="${risk.id}" aria-label="More options" aria-haspopup="menu">
               <svg viewBox="0 0 24 24" aria-hidden="true">
