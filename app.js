@@ -1644,9 +1644,9 @@ function renderFullRiskDetailedView(risk, impactTags) {
       </div>
       <div class="risk-metrics full-risk-metrics">
         <div class="metric-pair">
-          <span class="severity-badge ${risk.severity.toLowerCase()}" type="button" data-change-severity="${risk.id}" style="cursor: pointer;">
+          <button class="severity-badge ${risk.severity.toLowerCase()}" type="button" data-change-severity="${risk.id}">
             ${risk.severity}
-          </span>
+          </button>
         </div>
         <div class="metric-pair certainty-pair">
           <span class="metric-label">Certainty:</span>
