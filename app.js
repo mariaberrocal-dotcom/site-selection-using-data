@@ -151,24 +151,15 @@ function renderSummary(site) {
             flagButton.classList.toggle("is-active", isFlaggedRisk(risk.id));
             noteButton.dataset.noteRisk = risk.id;
             noteButton.innerHTML = renderNoteIcon();
-
-            const note = getRiskNote(risk.id);
-            noteButton.classList.toggle("has-note", Boolean(note));
+            noteButton.classList.toggle("has-note", Boolean(getRiskNote(risk.id)));
             noteButton.classList.toggle("is-open", state.activeNoteRiskId === risk.id);
-
             card.dataset.domain = risk.domainKey;
             card.dataset.riskId = risk.id;
             if (state.activeNoteRiskId === risk.id) {
               const actions = fragment.querySelector(".risk-card-actions");
               actions.insertAdjacentHTML("beforeend", renderNotePopover(risk.id));
             }
-
-            let cardHtml = card.outerHTML;
-            const noteButtonHtml = noteButton.outerHTML;
-            const tooltipHtml = note ? `<div class="note-tooltip">${escapeHtml(note)}</div>` : "";
-            const wrappedButton = `<div class="note-button-wrapper">${noteButtonHtml}${tooltipHtml}</div>`;
-            cardHtml = cardHtml.replace(noteButtonHtml, wrappedButton);
-            return cardHtml;
+            return card.outerHTML;
           })
           .join("")
       : '<div class="empty-state">No risks match the current search.</div>';
@@ -259,6 +250,7 @@ function renderSummary(site) {
     </div>
   `;
 
+  wrapSummaryNoteButtons(risks);
   wireSummaryRiskCards(risks);
   wireRiskInteractions(elements.summaryPanel);
   wireVerdictEditor(site);
@@ -271,6 +263,31 @@ function renderSummary(site) {
       });
     }
   );
+}
+
+function wrapSummaryNoteButtons(risks) {
+  const cards = [...elements.summaryPanel.querySelectorAll(".risk-card")];
+  cards.forEach((card) => {
+    const noteButton = card.querySelector("[data-note-risk]");
+    if (!noteButton || noteButton.parentElement?.classList.contains("note-button-wrapper")) {
+      return;
+    }
+    const risk = risks.find((r) => r.id === card.dataset.riskId);
+    if (!risk) return;
+
+    const note = getRiskNote(risk.id);
+    const wrapper = document.createElement("div");
+    wrapper.className = "note-button-wrapper";
+    noteButton.parentElement.insertBefore(wrapper, noteButton);
+    wrapper.appendChild(noteButton);
+
+    if (note) {
+      const tooltip = document.createElement("div");
+      tooltip.className = "note-tooltip";
+      tooltip.textContent = note;
+      wrapper.appendChild(tooltip);
+    }
+  });
 }
 
 function wireSummaryRiskCards(risks) {
