@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Site Evaluation Overview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css?v=20260622-2148" />
+  </head>
+  <body>
+    <div id="appToast" class="app-toast hidden" role="status" aria-live="polite"></div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <img src="./assets/Civarea2.svg" alt="Civarea" class="brand-logo" />
+        </div>
+        <nav class="sidebar-nav">
+          <button class="nav-icon" aria-label="Map">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"></path>
+              <path d="M9 4v13.5M15 6.5V20"></path>
+            </svg>
+          </button>
+          <button class="nav-icon" aria-label="List">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 6h13M8 12h13M8 18h13"></path>
+              <circle cx="4" cy="6" r="1.2"></circle>
+              <circle cx="4" cy="12" r="1.2"></circle>
+              <circle cx="4" cy="18" r="1.2"></circle>
+            </svg>
+          </button>
+          <button class="nav-icon active" aria-label="Location">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"
+              ></path>
+              <circle cx="12" cy="10" r="2.5"></circle>
+            </svg>
+          </button>
+        </nav>
+      </aside>
+
+      <div class="main-shell">
+        <header class="topbar">
+          <div class="topbar-actions">
+            <button class="ghost-icon" aria-label="Share">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 8a3 3 0 1 0-2.8-4H6v13h6.2A3 3 0 1 0 15 14a3 3 0 0 0-2.4 1.2L9 13.5V10l3.6-1.7A3 3 0 0 0 15 8Z"></path>
+              </svg>
+            </button>
+            <button class="ghost-icon" aria-label="Help">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M9.75 9a2.25 2.25 0 1 1 3.65 1.75c-.9.72-1.4 1.2-1.4 2.25"></path>
+                <circle cx="12" cy="17" r=".9" fill="currentColor" stroke="none"></circle>
+              </svg>
+            </button>
+            <button class="ghost-icon" aria-label="Settings">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m12 3 1.5 2.5 2.9.4-.9 2.8 1.8 2.2-2.2 1.8.9 2.8-2.9.4L12 21l-1.5-2.5-2.9-.4.9-2.8L6.7 13l2.2-1.8-.9-2.8 2.9-.4Z"></path>
+                <circle cx="12" cy="12" r="2.8"></circle>
+              </svg>
+            </button>
+            <div class="language-chip">English</div>
+            <button class="profile-pill" aria-label="Profile">
+              <span></span>
+            </button>
+          </div>
+        </header>
+
+        <main class="workspace">
+          <section class="page-surface">
+            <div class="page-header">
+              <div>
+                <h1 id="pageTitle">Site Evaluation</h1>
+                <div class="site-meta-row">
+                  <span id="statusPill" class="status-pill"></span>
+                  <span id="siteSubhead" class="site-subhead"></span>
+                </div>
+              </div>
+
+              <div class="page-tools">
+                <label class="search-field" for="searchInput">
+                  <input
+                    id="searchInput"
+                    type="search"
+                    placeholder="Search"
+                    autocomplete="off"
+                  />
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <path d="m20 20-3.5-3.5"></path>
+                  </svg>
+                </label>
+                <button class="secondary-button" type="button" disabled>Site Files</button>
+                <button id="exportButton" class="primary-button">
+                  Export
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="tab-bar" role="tablist" aria-label="Site evaluation tabs">
+              <button class="tab-button" data-tab="map" role="tab">Interactive Map</button>
+              <button class="tab-button active" data-tab="summary" role="tab">Summary Evaluation</button>
+              <button class="tab-button" data-tab="full" role="tab">Full Evaluation</button>
+            </div>
+
+            <section id="mapPanel" class="tab-panel hidden"></section>
+            <section id="summaryPanel" class="tab-panel"></section>
+            <section id="fullPanel" class="tab-panel hidden"></section>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <template id="riskCardTemplate">
+      <article class="risk-card">
+        <div class="risk-card-top">
+          <div class="risk-card-actions">
+            <button class="flag-button" type="button" data-flag-risk="" aria-label="Flag risk"></button>
+            <button class="note-button" type="button" data-note-risk="" aria-label="Add note"></button>
+          </div>
+          <div class="category-chip"></div>
+        </div>
+        <div class="risk-metrics">
+          <div class="metric-pair">
+            <span class="severity-badge"></span>
+          </div>
+          <div class="metric-pair certainty-pair">
+            <span class="metric-label">Certainty:</span>
+            <span class="certainty-badge"></span>
+          </div>
+        </div>
+        <h3 class="risk-title"></h3>
+        <p class="risk-text"></p>
+        <div class="risk-links">
+          <a class="source-link" href="#" target="_blank" rel="noreferrer noopener"></a>
+          <button class="evidence-link">Full evidence</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="./data/sites-data.js?v=20260622-2148"></script>
+    <script src="./app.js?v=20260622-2148"></script>
+  </body>
+</html>
