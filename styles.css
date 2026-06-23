@@ -631,6 +631,18 @@ button {
   font-weight: 500;
 }
 
+.jurisdiction-pair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-jurisdiction {
+  font-size: 14px;
+  color: var(--text-strong);
+  font-weight: 400;
+}
+
 .certainty-badge {
   padding: 4px 10px;
   background: var(--surface-alt);
@@ -1413,17 +1425,102 @@ button {
 .risk-card-footer {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
   margin-top: auto;
   padding-top: 12px;
 }
 
+.text-link-with-chevron {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chevron-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 200ms ease;
+}
+
+.technical-details:not([style*="display: none"]) ~ .risk-card-footer .chevron-icon {
+  transform: rotate(180deg);
+}
+
+.full-risk-detailed {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-height: auto;
+}
+
+.full-risk-compact {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-height: auto;
+}
+
+.full-risk-header {
+  display: grid;
+  grid-template-columns: 80px 1fr 200px;
+  align-items: center;
+  gap: 16px;
+}
+
+.full-risk-header-left {
+  display: flex;
+  align-items: center;
+}
+
+.full-risk-header-center {
+  min-width: 0;
+}
+
+.full-risk-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: right;
+}
+
+.risk-statement-compact {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+  line-height: 1.4;
+  white-space: normal;
+  word-break: break-word;
+}
+
 .impact-label {
-  display: block;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-strong);
-  margin-bottom: 8px;
+  margin-right: 12px;
+}
+
+.impact-tags {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .technical-details {

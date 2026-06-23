@@ -143,6 +143,10 @@ function renderSummary(site) {
             severity.textContent = risk.severity;
             severity.classList.add(risk.severity.toLowerCase());
             certainty.textContent = `${risk.certainty}%`;
+            const jurisdictionSpan = fragment.querySelector(".metric-jurisdiction");
+            if (jurisdictionSpan) {
+              jurisdictionSpan.textContent = risk.jurisdiction || "Unknown";
+            }
             title.textContent = risk.statement || risk.title;
             title.setAttribute("title", risk.title !== risk.statement ? `Technical: ${risk.title}` : "");
             text.textContent = risk.summary;
@@ -778,7 +782,10 @@ function wireRiskDetailsToggle(container) {
       if (details) {
         const isOpen = details.style.display !== "none";
         details.style.display = isOpen ? "none" : "block";
-        button.textContent = isOpen ? "Show technical details" : "Hide technical details";
+        const textNode = button.childNodes[0];
+        if (textNode) {
+          textNode.textContent = isOpen ? "Show technical details" : "Hide technical details";
+        }
       }
     });
   });
@@ -1572,8 +1579,21 @@ function renderFullRiskMarkup(risk) {
     })
     .join("");
 
+  const isListView = state.fullRiskView === "list";
+
+  if (isListView) {
+    return renderFullRiskDetailedView(risk, impactTags);
+  } else {
+    return renderFullRiskCompactView(risk, impactTags);
+  }
+}
+
+function renderFullRiskDetailedView(risk, impactTags) {
+  const note = getRiskNote(risk.id);
+  const noteEditorOpen = state.activeNoteRiskId === risk.id;
+
   return `
-    <article class="full-risk-row" id="risk-${risk.id}" data-risk-id="${risk.id}">
+    <article class="full-risk-row full-risk-detailed" id="risk-${risk.id}" data-risk-id="${risk.id}">
       <div class="full-risk-top">
         <div class="full-risk-actions">
           <button
@@ -1624,9 +1644,9 @@ function renderFullRiskMarkup(risk) {
       </div>
       <div class="risk-metrics full-risk-metrics">
         <div class="metric-pair">
-          <button class="severity-badge ${risk.severity.toLowerCase()}" type="button" data-change-severity="${risk.id}" style="border: none; cursor: pointer; background: inherit; font-weight: inherit; padding: inherit; border-radius: inherit;">
+          <span class="severity-badge ${risk.severity.toLowerCase()}" type="button" data-change-severity="${risk.id}" style="cursor: pointer;">
             ${risk.severity}
-          </button>
+          </span>
         </div>
         <div class="metric-pair certainty-pair">
           <span class="metric-label">Certainty:</span>
@@ -1634,7 +1654,7 @@ function renderFullRiskMarkup(risk) {
         </div>
         <div class="metric-pair">
           <span class="metric-label">Jurisdiction:</span>
-          <span class="metric-value">${risk.jurisdiction || "N/A"}</span>
+          <span class="metric-value">${risk.jurisdiction || "Unknown"}</span>
         </div>
       </div>
       <h5 class="risk-statement">${risk.statement}</h5>
@@ -1642,7 +1662,12 @@ function renderFullRiskMarkup(risk) {
       ${impactTags ? `<div class="impact-tags"><span class="impact-label">Impact</span>${impactTags}</div>` : ""}
       <div class="risk-card-footer">
         <a class="text-link" href="${risk.sources[0]?.url || "#"}" target="_blank" rel="noreferrer noopener">Sources (${risk.sources.length})</a>
-        <button class="text-link" type="button" data-toggle-technical="${risk.id}">Show technical details</button>
+        <button class="text-link text-link-with-chevron" type="button" data-toggle-technical="${risk.id}">
+          Show technical details
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="chevron-icon">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
       </div>
       <div class="technical-details" data-technical-details="${risk.id}" style="display: none;">
         <div class="technical-section">
@@ -1657,6 +1682,62 @@ function renderFullRiskMarkup(risk) {
             </ul>
           </div>
         ` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function renderFullRiskCompactView(risk, impactTags) {
+  return `
+    <article class="full-risk-row full-risk-compact" id="risk-${risk.id}" data-risk-id="${risk.id}">
+      <div class="full-risk-top">
+        <div class="full-risk-header">
+          <div class="full-risk-header-left">
+            <span class="severity-badge ${risk.severity.toLowerCase()}" type="button" data-change-severity="${risk.id}" style="cursor: pointer;">
+              ${risk.severity}
+            </span>
+          </div>
+          <div class="full-risk-header-center">
+            <h5 class="risk-statement-compact">${risk.statement}</h5>
+          </div>
+          <div class="full-risk-header-right">
+            <span class="metric-label">Jurisdiction:</span>
+            <span class="metric-value">${risk.jurisdiction || "Unknown"}</span>
+          </div>
+        </div>
+        <div class="full-risk-actions">
+          <button
+            class="flag-button ${isPromotedRisk(risk.id) ? "is-active" : ""}"
+            type="button"
+            data-flag-risk="${risk.id}"
+            aria-label="${getPromoteActionLabel(risk.id)}"
+            data-promote-label="${getPromoteActionLabel(risk.id)}"
+          >
+            ${renderFlagIcon()}
+          </button>
+          <button
+            class="bookmark-button ${isBookmarkedRisk(risk.id) ? "is-active" : ""}"
+            type="button"
+            data-bookmark-risk="${risk.id}"
+            aria-label="${getBookmarkActionLabel(risk.id)}"
+            data-bookmark-label="${getBookmarkActionLabel(risk.id)}"
+          >
+            ${renderBookmarkIcon()}
+          </button>
+          <div class="risk-more-menu">
+            <button class="more-button" type="button" data-more-menu="${risk.id}" aria-label="More options" aria-haspopup="menu">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+              </svg>
+            </button>
+            <div class="more-menu-dropdown" role="menu">
+              <button class="more-menu-item" type="button" data-edit-risk="${risk.id}" role="menuitem">Edit</button>
+              <button class="more-menu-item danger" type="button" data-delete-risk="${risk.id}" role="menuitem">Delete</button>
+            </div>
+          </div>
+        </div>
       </div>
     </article>
   `;
