@@ -149,30 +149,26 @@ function renderSummary(site) {
             flagButton.dataset.flagRisk = risk.id;
             flagButton.innerHTML = renderFlagIcon();
             flagButton.classList.toggle("is-active", isFlaggedRisk(risk.id));
-
-            const note = getRiskNote(risk.id);
             noteButton.dataset.noteRisk = risk.id;
             noteButton.innerHTML = renderNoteIcon();
+
+            const note = getRiskNote(risk.id);
             noteButton.classList.toggle("has-note", Boolean(note));
             noteButton.classList.toggle("is-open", state.activeNoteRiskId === risk.id);
 
-            const noteWrapper = document.createElement("div");
-            noteWrapper.className = "note-button-wrapper";
-            noteButton.parentNode.insertBefore(noteWrapper, noteButton);
-            noteWrapper.appendChild(noteButton);
-            if (note) {
-              const tooltipDiv = document.createElement("div");
-              tooltipDiv.className = "note-tooltip";
-              tooltipDiv.textContent = note;
-              noteWrapper.appendChild(tooltipDiv);
-            }
             card.dataset.domain = risk.domainKey;
             card.dataset.riskId = risk.id;
             if (state.activeNoteRiskId === risk.id) {
               const actions = fragment.querySelector(".risk-card-actions");
               actions.insertAdjacentHTML("beforeend", renderNotePopover(risk.id));
             }
-            return card.outerHTML;
+
+            let cardHtml = card.outerHTML;
+            const noteButtonHtml = noteButton.outerHTML;
+            const tooltipHtml = note ? `<div class="note-tooltip">${escapeHtml(note)}</div>` : "";
+            const wrappedButton = `<div class="note-button-wrapper">${noteButtonHtml}${tooltipHtml}</div>`;
+            cardHtml = cardHtml.replace(noteButtonHtml, wrappedButton);
+            return cardHtml;
           })
           .join("")
       : '<div class="empty-state">No risks match the current search.</div>';
