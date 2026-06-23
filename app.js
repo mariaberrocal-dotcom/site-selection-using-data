@@ -17,6 +17,7 @@ const state = {
   editedVerdictStatus: {}, // tracks "suggested" or "edited"
   editingCategorySummaryId: null,
   editedCategorySummaries: {},
+  temperatureProfileHidden: {}, // tracks hidden state by domain key
 };
 
 const elements = {
@@ -357,10 +358,12 @@ function generateExecutiveAssessment(risks) {
   );
 }
 
-function renderTemperatureProfile(profile) {
+function renderTemperatureProfile(profile, domainKey) {
   if (!profile) {
     return "";
   }
+
+  const isHidden = state.temperatureProfileHidden[domainKey];
 
   const monthlyTableRows = profile.monthlyData
     .map(
@@ -376,7 +379,15 @@ function renderTemperatureProfile(profile) {
 
   return `
     <section class="temperature-profile">
-      <h4>Temperature Profile</h4>
+      <div class="temperature-profile-header">
+        <h4>Temperature Profile</h4>
+        <button class="toggle-temp-profile" type="button" data-toggle-temp-profile="${domainKey}" aria-label="Toggle temperature profile">
+          ${isHidden ? "Show" : "Hide"}
+        </button>
+      </div>
+      ${
+        !isHidden
+          ? `
       <p class="temp-source">Historical data from Open-Meteo (ERSA)</p>
 
       <div class="temperature-stats">
@@ -436,6 +447,9 @@ function renderTemperatureProfile(profile) {
           </tbody>
         </table>
       </div>
+    `
+          : ""
+      }
     </section>
   `;
 }
@@ -588,7 +602,7 @@ function renderFull(site) {
     ? `
       <section class="full-category-pane" id="domain-${selectedDomain.key}" data-domain="${selectedDomain.key}">
         ${categorySummary}
-        ${selectedDomain.temperatureProfile ? renderTemperatureProfile(selectedDomain.temperatureProfile) : ""}
+        ${selectedDomain.temperatureProfile ? renderTemperatureProfile(selectedDomain.temperatureProfile, selectedDomain.key) : ""}
         <nav class="section-quicknav" aria-label="Category sections">
           <a href="#section-risks" class="section-quicknav-item">Identified Risks (${selectedDomain.risks.length})</a>
           <a href="#section-findings" class="section-quicknav-item">Key Findings (${selectedDomain.keyFindings.length})</a>
@@ -715,6 +729,7 @@ function renderFull(site) {
     });
   });
   wireRiskInteractions(elements.fullPanel);
+  wireTemperatureProfileToggle(elements.fullPanel);
   wireFullSectionSpy();
 }
 
@@ -1497,6 +1512,16 @@ function wireVerdictEditor(site) {
       render();
     });
   }
+}
+
+function wireTemperatureProfileToggle(container) {
+  [...container.querySelectorAll("[data-toggle-temp-profile]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const domainKey = button.dataset.toggleTempProfile;
+      state.temperatureProfileHidden[domainKey] = !state.temperatureProfileHidden[domainKey];
+      render();
+    });
+  });
 }
 
 function wireFullSectionSpy() {

@@ -1550,11 +1550,35 @@ button {
   margin-bottom: 28px;
 }
 
+.temperature-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .temperature-profile h4 {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-strong);
+}
+
+.toggle-temp-profile {
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background-color 120ms ease;
+}
+
+.toggle-temp-profile:hover {
+  background: var(--blue-soft);
 }
 
 .temp-source {
@@ -1578,6 +1602,16 @@ button {
   padding: 14px;
   display: grid;
   gap: 8px;
+}
+
+.temp-stat-item .stat-label {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 0px;
+}
+
+.temp-stat-item .stat-value {
+  font-weight: 500;
 }
 
 .monthly-temperatures {
