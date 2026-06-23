@@ -1369,39 +1369,56 @@ button {
 .impact-tag {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   padding: 6px 10px;
   border-radius: 999px;
+  border: 1px solid #d9dce4;
+  background: #ffffff;
+  color: #2f3640;
   font-size: 12px;
   font-weight: 600;
 }
 
-.impact-tag.cost {
-  background: #ffe8e8;
+.impact-tag-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.impact-tag-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.impact-tag.cost .impact-tag-icon {
   color: #d94b3d;
 }
 
-.impact-tag.schedule {
-  background: #f0e8ff;
+.impact-tag.schedule .impact-tag-icon {
   color: #8b5cf6;
 }
 
-.impact-tag.permitting {
-  background: #fff1e8;
+.impact-tag.permitting .impact-tag-icon {
   color: #c76b29;
 }
 
-.impact-tag.buildability {
-  background: #e8f5e9;
+.impact-tag.buildability .impact-tag-icon {
   color: #2f8a4c;
 }
 
-.impact-tag.operations {
-  background: #e8f7ff;
+.impact-tag.operations .impact-tag-icon {
   color: #0c7fa8;
 }
 
-.impact-tag.utilities {
-  background: #f0f0f0;
+.impact-tag.utilities .impact-tag-icon {
   color: #5a6269;
 }
 
