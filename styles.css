@@ -1399,6 +1399,94 @@ button {
   line-height: 1.6;
 }
 
+.verdict-section {
+  display: grid;
+  gap: 12px;
+}
+
+.verdict-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.edit-verdict-button {
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background-color 120ms ease;
+}
+
+.edit-verdict-button:hover {
+  background: var(--blue-soft);
+}
+
+.verdict-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.verdict-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 100px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  outline: none;
+  color: var(--text-strong);
+  background: #fbfcff;
+  font-size: 14px;
+  line-height: 1.55;
+  font-family: inherit;
+}
+
+.verdict-textarea:focus {
+  border-color: rgba(72, 120, 242, 0.7);
+  box-shadow: 0 0 0 3px rgba(72, 120, 242, 0.12);
+}
+
+.editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.editor-cancel,
+.editor-save {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.editor-cancel {
+  background: var(--surface-alt);
+  color: var(--text-soft);
+}
+
+.editor-cancel:hover {
+  background: var(--line);
+}
+
+.editor-save {
+  background: var(--blue);
+  color: #fff;
+}
+
+.editor-save:hover {
+  background: #3a62d4;
+}
+
 @media (max-width: 1200px) {
   .risk-grid,
   .map-layout,

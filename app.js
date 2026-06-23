@@ -12,6 +12,10 @@ const state = {
   riskNotes: {},
   activeNoteRiskId: null,
   previousView: null,
+  editingSiteVerdictId: null,
+  editedSiteVerdict: {},
+  editingCategorySummaryId: null,
+  editedCategorySummaries: {},
 };
 
 const elements = {
@@ -177,11 +181,29 @@ function renderSummary(site) {
               <span class="stat-value">${site.locationLabel}</span>
             </div>
           </div>
-          <div class="verdict-row">
-            <span class="stat-label">Evaluation Verdict</span>
-            <span class="verdict-chip">Suggested by AI</span>
+          <div class="verdict-section">
+            <div class="verdict-row">
+              <span class="stat-label">Evaluation Verdict</span>
+              <span class="verdict-chip">Suggested by AI</span>
+              <button class="edit-verdict-button" type="button" data-edit-verdict aria-label="Edit verdict">Edit</button>
+            </div>
+            ${
+              state.editingSiteVerdictId === site.id
+                ? `
+              <div class="verdict-editor" data-verdict-editor="${site.id}">
+                <textarea class="verdict-textarea" rows="4" placeholder="Enter site evaluation verdict...">${escapeHtml(
+                  state.editedSiteVerdict[site.id] ||
+                    generateSiteExecutiveSummary(site)
+                )}</textarea>
+                <div class="editor-actions">
+                  <button class="editor-cancel" type="button" data-verdict-cancel="${site.id}">Cancel</button>
+                  <button class="editor-save" type="button" data-verdict-save="${site.id}">Save</button>
+                </div>
+              </div>
+            `
+                : `<p class="verdict-body">${state.editedSiteVerdict[site.id] || generateSiteExecutiveSummary(site)}</p>`
+            }
           </div>
-          <p class="verdict-body">${site.verdict}</p>
         </div>
       </section>
 
@@ -216,6 +238,7 @@ function renderSummary(site) {
 
   wireSummaryRiskCards(risks);
   wireRiskInteractions(elements.summaryPanel);
+  wireVerdictEditor(site);
 
   [...elements.summaryPanel.querySelectorAll("[data-summary-risk-view]")].forEach(
     (button) => {
@@ -338,6 +361,62 @@ function renderCategorySummary(domain, risks) {
       </div>
     </section>
   `;
+}
+
+function generateSiteExecutiveSummary(site) {
+  if (!site || !site.domains || site.domains.length === 0) {
+    return "The site requires comprehensive due diligence across all categories before development can proceed.";
+  }
+
+  const categoryAssessments = [];
+  const themesFound = new Set();
+
+  site.domains.forEach((domain) => {
+    if (domain.risks && domain.risks.length > 0) {
+      const risksByType = {
+        environmental: domain.risks.filter((r) =>
+          /contamination|environmental|remediation|asbestos|lead|mold/i.test([r.title, r.statement].join(" "))
+        ),
+        regulatory: domain.risks.filter((r) =>
+          /permit|zoning|approval|regulatory|entitlement/i.test([r.title, r.statement].join(" "))
+        ),
+        infrastructure: domain.risks.filter((r) =>
+          /utility|power|water|fiber|infrastructure|connection/i.test([r.title, r.statement].join(" "))
+        ),
+        physical: domain.risks.filter((r) =>
+          /site|physical|access|constraint|condition|hazard|flood|seismic/i.test([r.title, r.statement].join(" "))
+        ),
+      };
+
+      if (risksByType.environmental.length > 0 && !themesFound.has("environmental")) {
+        categoryAssessments.push("Environmental assessments and coordination will be required.");
+        themesFound.add("environmental");
+      }
+      if (risksByType.regulatory.length > 0 && !themesFound.has("regulatory")) {
+        categoryAssessments.push("Regulatory approvals and permits need to be secured.");
+        themesFound.add("regulatory");
+      }
+      if (risksByType.infrastructure.length > 0 && !themesFound.has("infrastructure")) {
+        categoryAssessments.push("Infrastructure capacity and connections require confirmation.");
+        themesFound.add("infrastructure");
+      }
+      if (risksByType.physical.length > 0 && !themesFound.has("physical")) {
+        categoryAssessments.push("Site conditions need to be assessed and mitigated.");
+        themesFound.has("physical");
+      }
+    }
+  });
+
+  if (categoryAssessments.length === 0) {
+    return "The site is feasible for development with standard due diligence.";
+  }
+
+  const assessmentText = categoryAssessments.slice(0, 3).join(" ");
+  return (
+    "Development is feasible but will require attention to multiple considerations: " +
+    assessmentText.charAt(0).toLowerCase() +
+    assessmentText.slice(1)
+  );
 }
 
 function renderFull(site) {
@@ -1244,6 +1323,38 @@ function wireRiskInteractions(container) {
       render();
     });
   });
+}
+
+function wireVerdictEditor(site) {
+  const editButton = elements.summaryPanel?.querySelector("[data-edit-verdict]");
+  const cancelButton = elements.summaryPanel?.querySelector("[data-verdict-cancel]");
+  const saveButton = elements.summaryPanel?.querySelector("[data-verdict-save]");
+
+  if (editButton) {
+    editButton.addEventListener("click", () => {
+      state.editingSiteVerdictId = site.id;
+      render();
+    });
+  }
+
+  if (cancelButton) {
+    cancelButton.addEventListener("click", () => {
+      state.editingSiteVerdictId = null;
+      render();
+    });
+  }
+
+  if (saveButton) {
+    saveButton.addEventListener("click", () => {
+      const editor = elements.summaryPanel?.querySelector("[data-verdict-editor]");
+      const textarea = editor?.querySelector("textarea");
+      if (textarea) {
+        state.editedSiteVerdict[site.id] = textarea.value.trim();
+      }
+      state.editingSiteVerdictId = null;
+      render();
+    });
+  }
 }
 
 function wireFullSectionSpy() {
