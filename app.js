@@ -14,6 +14,7 @@ const state = {
   previousView: null,
   editingSiteVerdictId: null,
   editedSiteVerdict: {},
+  editedVerdictStatus: {}, // tracks "suggested" or "edited"
   editingCategorySummaryId: null,
   editedCategorySummaries: {},
 };
@@ -185,13 +186,20 @@ function renderSummary(site) {
             <div class="verdict-row">
               <span class="stat-label">Evaluation Verdict</span>
               <button class="verdict-chip-button" type="button" data-edit-verdict aria-label="Edit verdict">
-                <span class="verdict-chip">Suggested by AI</span>
+                <span class="verdict-chip">
+                  ${state.editedVerdictStatus[site.id] === "edited" ? "Edited by User" : "Suggested by AI"}
+                </span>
                 <span class="verdict-edit-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
                     <path d="M3 17.25V21h3.75L17.81 9.94m-4.88-4.88L19.93 2.05a2.121 2.121 0 013 3L15.93 12.07m-4.88-4.88l1.41-1.41a2.121 2.121 0 013 0l4.88 4.88a2.121 2.121 0 010 3l-1.41 1.41m-2.12-2.12L9.05 9.05"/>
                   </svg>
                 </span>
               </button>
+              ${
+                state.editedVerdictStatus[site.id] === "edited"
+                  ? `<button class="revert-verdict-button" type="button" data-revert-verdict="${site.id}" aria-label="Revert to suggested version">Revert</button>`
+                  : ""
+              }
             </div>
             ${
               state.editingSiteVerdictId === site.id
@@ -1335,6 +1343,7 @@ function wireVerdictEditor(site) {
   const editButton = elements.summaryPanel?.querySelector("[data-edit-verdict]");
   const cancelButton = elements.summaryPanel?.querySelector("[data-verdict-cancel]");
   const saveButton = elements.summaryPanel?.querySelector("[data-verdict-save]");
+  const revertButton = elements.summaryPanel?.querySelector("[data-revert-verdict]");
 
   if (editButton) {
     editButton.addEventListener("click", () => {
@@ -1356,8 +1365,17 @@ function wireVerdictEditor(site) {
       const textarea = editor?.querySelector("textarea");
       if (textarea) {
         state.editedSiteVerdict[site.id] = textarea.value.trim();
+        state.editedVerdictStatus[site.id] = "edited";
       }
       state.editingSiteVerdictId = null;
+      render();
+    });
+  }
+
+  if (revertButton) {
+    revertButton.addEventListener("click", () => {
+      delete state.editedSiteVerdict[site.id];
+      delete state.editedVerdictStatus[site.id];
       render();
     });
   }

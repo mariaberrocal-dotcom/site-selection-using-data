@@ -1401,7 +1401,7 @@ button {
 
 .verdict-section {
   display: grid;
-  gap: 12px;
+  gap: 0px;
 }
 
 .verdict-row {
@@ -1409,6 +1409,7 @@ button {
   align-items: center;
   gap: 12px;
   position: relative;
+  margin-bottom: 0px;
 }
 
 .verdict-chip-button {
@@ -1463,6 +1464,26 @@ button {
 
 .verdict-chip-button:hover .verdict-edit-icon {
   opacity: 1;
+}
+
+.revert-verdict-button {
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 120ms ease;
+  text-decoration: underline;
+  text-decoration-color: var(--text-soft);
+  text-underline-offset: 3px;
+}
+
+.revert-verdict-button:hover {
+  color: var(--text);
+  text-decoration-color: var(--text);
 }
 
 .verdict-editor {
