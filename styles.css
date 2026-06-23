@@ -426,7 +426,7 @@ button {
   display: block;
   font-size: 14px;
   color: var(--text-strong);
-  font-weight: 600;
+  font-weight: 100;
 }
 
 .verdict-row {
@@ -445,6 +445,7 @@ button {
   background: #f0eaff;
   color: #765cff;
   padding: 7px 12px;
+  font-weight: 200;
 }
 
 .verdict-body {
