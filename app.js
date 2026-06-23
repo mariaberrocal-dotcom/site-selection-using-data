@@ -250,73 +250,74 @@ function wireSummaryRiskCards(risks) {
   });
 }
 
-function generatePrimaryConsiderations(domain, risks) {
+function generateExecutiveAssessment(risks) {
   if (!risks || risks.length === 0) {
-    return [];
+    return "Development is feasible with standard due diligence and planning.";
   }
 
-  const considerations = new Map();
-
-  const considerationPatterns = [
-    {
-      theme: "Environmental and contamination concerns",
-      keywords: /contamination|environmental|remediation|superfund|asbestos|lead|mold|hazardous|plume|npl/i,
-    },
-    {
-      theme: "Wetland and habitat constraints",
-      keywords: /wetland|habitat|species|protected|ecological|preserve|riparian|floodplain/i,
-    },
-    {
-      theme: "Zoning, permitting, and regulatory requirements",
-      keywords: /zoning|permit|permitting|variance|rezoning|entitlement|approval|hearing|litigation|master plan/i,
-    },
-    {
-      theme: "Utility infrastructure and capacity",
-      keywords: /utility|power|energy|water|wastewater|fiber|connectivity|electrical|capacity|grid|substation/i,
-    },
-    {
-      theme: "Physical site constraints and constructability",
-      keywords: /constructability|access|geotechnical|slope|stabilization|soil|foundation|buildable|parcel|structure/i,
-    },
-    {
-      theme: "Climate and natural hazard resilience",
-      keywords: /flood|flood zone|seismic|earthquake|storm|hazard|climate|wildfire|drought|inundation/i,
-    },
-    {
-      theme: "Community and stakeholder engagement",
-      keywords: /community|stakeholder|opposition|social license|engagement|neighborhood|local government|elected/i,
-    },
-    {
-      theme: "Financial and cost implications",
-      keywords: /financial|cost|budget|tax|incentive|financing|insurance|ciac|premium/i,
-    },
-  ];
+  const risksByTheme = {
+    environmental: [],
+    permitting: [],
+    utilities: [],
+    constraints: [],
+    other: [],
+  };
 
   risks.forEach((risk) => {
-    const riskText = [risk.title, risk.statement, risk.summary]
+    const text = [risk.title, risk.statement, risk.summary]
       .filter(Boolean)
-      .join(" ");
+      .join(" ")
+      .toLowerCase();
 
-    considerationPatterns.forEach((pattern) => {
-      if (pattern.keywords.test(riskText)) {
-        if (!considerations.has(pattern.theme)) {
-          considerations.set(pattern.theme, []);
-        }
-        if (!considerations.get(pattern.theme).includes(risk)) {
-          considerations.get(pattern.theme).push(risk);
-        }
-      }
-    });
-  });
-
-  const result = [];
-  considerations.forEach((risks, theme) => {
-    if (risks.length > 0) {
-      result.push({ theme, riskCount: risks.length });
+    if (/contamination|environmental|remediation|asbestos|lead|mold|hazard/i.test(text)) {
+      risksByTheme.environmental.push(risk);
+    } else if (/permit|zoning|approval|hearing|variance|entitlement/i.test(text)) {
+      risksByTheme.permitting.push(risk);
+    } else if (/utility|power|water|fiber|connectivity|infrastructure/i.test(text)) {
+      risksByTheme.utilities.push(risk);
+    } else if (/flood|seismic|climate|hazard|wildfire|access|wetland|habitat/i.test(text)) {
+      risksByTheme.constraints.push(risk);
+    } else {
+      risksByTheme.other.push(risk);
     }
   });
 
-  return result.slice(0, 5);
+  const assessmentParts = [];
+
+  if (risksByTheme.environmental.length > 0) {
+    assessmentParts.push(
+      "Environmental considerations may require additional site investigation and regulatory coordination."
+    );
+  }
+
+  if (risksByTheme.permitting.length > 0) {
+    assessmentParts.push(
+      "Project approvals and permits will need to address regulatory requirements before development can proceed."
+    );
+  }
+
+  if (risksByTheme.utilities.length > 0) {
+    assessmentParts.push(
+      "Infrastructure connections and capacity will need to be confirmed with relevant service providers."
+    );
+  }
+
+  if (risksByTheme.constraints.length > 0) {
+    assessmentParts.push(
+      "Site conditions and physical characteristics will need to be assessed and addressed during site planning."
+    );
+  }
+
+  if (assessmentParts.length === 0) {
+    return "Development is feasible with standard due diligence and planning.";
+  }
+
+  const assessment = assessmentParts.join(" ");
+  return (
+    "Development remains feasible but requires attention to key considerations: " +
+    assessment.charAt(0).toLowerCase() +
+    assessment.slice(1)
+  );
 }
 
 function renderCategorySummary(domain, risks) {
@@ -324,11 +325,7 @@ function renderCategorySummary(domain, risks) {
     return "";
   }
 
-  const considerations = generatePrimaryConsiderations(domain, risks);
-
-  const considerationsList = considerations
-    .map(({ theme }) => `<li>${theme} may require additional planning and coordination.</li>`)
-    .join("");
+  const executiveAssessment = generateExecutiveAssessment(risks);
 
   return `
     <section class="category-summary">
@@ -336,22 +333,8 @@ function renderCategorySummary(domain, risks) {
 
       <div class="category-summary-body">
         <div class="executive-assessment">
-          <h4>Executive Assessment</h4>
-          <p>${domain.summary}</p>
+          <p>${executiveAssessment}</p>
         </div>
-
-        ${
-          considerations.length > 0
-            ? `
-          <div class="primary-considerations">
-            <h4>Primary Development Considerations</h4>
-            <ul class="considerations-list">
-              ${considerationsList}
-            </ul>
-          </div>
-        `
-            : ""
-        }
       </div>
     </section>
   `;
