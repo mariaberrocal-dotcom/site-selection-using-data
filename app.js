@@ -149,11 +149,22 @@ function renderSummary(site) {
             flagButton.dataset.flagRisk = risk.id;
             flagButton.innerHTML = renderFlagIcon();
             flagButton.classList.toggle("is-active", isFlaggedRisk(risk.id));
+
+            const note = getRiskNote(risk.id);
+            const noteWrapper = document.createElement("div");
+            noteWrapper.className = "note-button-wrapper";
             noteButton.dataset.noteRisk = risk.id;
             noteButton.innerHTML = renderNoteIcon();
-            noteButton.classList.toggle("has-note", Boolean(getRiskNote(risk.id)));
+            noteButton.classList.toggle("has-note", Boolean(note));
             noteButton.classList.toggle("is-open", state.activeNoteRiskId === risk.id);
-            noteButton.setAttribute("title", getRiskNote(risk.id) || "Add note");
+            noteWrapper.appendChild(noteButton);
+            if (note) {
+              const tooltipDiv = document.createElement("div");
+              tooltipDiv.className = "note-tooltip";
+              tooltipDiv.textContent = note;
+              noteWrapper.appendChild(tooltipDiv);
+            }
+            noteButton.parentNode.replaceChild(noteWrapper, noteButton);
             card.dataset.domain = risk.domainKey;
             card.dataset.riskId = risk.id;
             if (state.activeNoteRiskId === risk.id) {
