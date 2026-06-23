@@ -208,6 +208,13 @@ button {
   justify-content: space-between;
   gap: 20px;
   align-items: flex-start;
+  border-style: none;
+  border-width: 1px;
+}
+
+.page-header > div:first-child {
+  display: flex;
+  align-items: stretch;
 }
 
 .page-header h1 {
