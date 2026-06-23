@@ -213,9 +213,10 @@ button {
   border-bottom: none;
 }
 
-.page-header > div:first-child {
+.header-title-section {
   display: flex;
-  align-items: stretch;
+  justify-content: flex-start;
+  align-items: center;
 }
 
 .page-header h1 {
