@@ -863,6 +863,240 @@ button {
   color: #9198a5;
   font-size: 14px;
   font-weight: 600;
+  position: relative;
+}
+
+.sidenav-head-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sidenav-bookmarks-button {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #9198a5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 100ms ease;
+}
+
+.sidenav-bookmarks-button:hover {
+  background: #f0f0f0;
+  color: #6c7380;
+}
+
+.sidenav-bookmarks-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sidenav-bookmarks-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--blue);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidenav-bookmarks-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-width: 280px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+}
+
+.sidenav-bookmarks-popover.is-open {
+  display: block;
+}
+
+.bookmarks-popover-content {
+  padding: 0;
+}
+
+.bookmarks-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bookmarks-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.bookmarks-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue);
+  background: var(--blue-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.bookmarks-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.bookmark-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.bookmark-item:hover {
+  background: var(--surface-alt);
+}
+
+.bookmark-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.bookmark-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+  line-height: 1.4;
+}
+
+.bookmark-remove {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+  color: #c2c6d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 100ms ease;
+}
+
+.bookmark-remove:hover {
+  color: var(--red);
+}
+
+.bookmark-remove svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bookmark-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.bookmark-severity {
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.bookmark-severity-high {
+  background: #fff0ef;
+  color: #ef5b55;
+}
+
+.bookmark-severity-medium {
+  background: #fff8e8;
+  color: #ffc647;
+}
+
+.bookmark-severity-low {
+  background: #e9fbf2;
+  color: #22c37a;
+}
+
+.bookmark-category {
+  color: #6c7380;
+  text-transform: capitalize;
+}
+
+.bookmarks-popover-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: #6c7380;
+}
+
+.bookmarks-popover-empty p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.bookmarks-empty-hint {
+  font-size: 12px;
+  color: #9198a5;
+}
+
+@keyframes highlight-pulse {
+  0% {
+    background-color: transparent;
+    box-shadow: 0 0 0 0 rgba(72, 120, 242, 0.4);
+  }
+  50% {
+    background-color: rgba(72, 120, 242, 0.1);
+    box-shadow: 0 0 0 8px rgba(72, 120, 242, 0);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 0 rgba(72, 120, 242, 0);
+  }
+}
+
+.risk-card.highlight-pulse {
+  animation: highlight-pulse 0.8s ease-out 2;
 }
 
 .full-sidenav-list {

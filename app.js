@@ -727,7 +727,18 @@ function renderFull(site) {
       <div class="full-eval-shell">
         <aside class="full-sidenav">
           <div class="full-sidenav-head">
-            <span>Categories</span>
+            <div class="sidenav-head-group">
+              <span>Categories</span>
+              <button class="sidenav-bookmarks-button" type="button" aria-label="View bookmarks" data-bookmarks-trigger>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 4.5h10a1.5 1.5 0 0 1 1.5 1.5V20l-6.5-3.8L5.5 20V6A1.5 1.5 0 0 1 7 4.5Z"></path>
+                </svg>
+                <span class="sidenav-bookmarks-badge">${state.bookmarkedRiskIds.length}</span>
+              </button>
+            </div>
+            <div class="sidenav-bookmarks-popover" role="dialog" aria-label="Bookmarked risks" data-bookmarks-popover>
+              ${renderBookmarksPopover(site)}
+            </div>
           </div>
           <div class="full-sidenav-list">${navMarkup}</div>
         </aside>
@@ -754,6 +765,62 @@ function renderFull(site) {
   wireRiskInteractions(elements.fullPanel);
   wireTemperatureProfileToggle(elements.fullPanel);
   wireFullSectionSpy();
+  wireBookmarksPopover(site);
+}
+
+function wireBookmarksPopover(site) {
+  const trigger = elements.fullPanel?.querySelector("[data-bookmarks-trigger]");
+  const popover = elements.fullPanel?.querySelector("[data-bookmarks-popover]");
+
+  if (!trigger || !popover) return;
+
+  trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    popover.classList.toggle("is-open");
+  });
+
+  document.addEventListener("click", (e) => {
+    if (popover.classList.contains("is-open") && !popover.parentElement.contains(e.target)) {
+      popover.classList.remove("is-open");
+    }
+  });
+
+  [...popover.querySelectorAll("[data-bookmark-item]")].forEach((item) => {
+    item.addEventListener("click", (e) => {
+      if (e.target.closest("[data-remove-bookmark]")) {
+        return;
+      }
+      const riskId = item.dataset.bookmarkItem;
+      const risk = site.allDomainRisks.find((r) => r.id === riskId);
+      if (risk) {
+        popover.classList.remove("is-open");
+        state.tab = "full";
+        state.selectedDomainKey = risk.domainKey;
+        state.focusDomain = risk.domainKey;
+        state.focusRisk = riskId;
+        render();
+        setTimeout(() => {
+          const riskElement = elements.fullPanel?.querySelector(`[data-risk-id="${riskId}"]`);
+          if (riskElement) {
+            riskElement.scrollIntoView({ behavior: "smooth", block: "center" });
+            riskElement.classList.add("highlight-pulse");
+            setTimeout(() => {
+              riskElement.classList.remove("highlight-pulse");
+            }, 2000);
+          }
+        }, 100);
+      }
+    });
+  });
+
+  [...popover.querySelectorAll("[data-remove-bookmark]")].forEach((button) => {
+    button.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const riskId = button.dataset.removeBookmark;
+      toggleBookmarkedRisk(riskId);
+      render();
+    });
+  });
 }
 
 function renderMap(site) {
@@ -1543,6 +1610,65 @@ function renderNoteIcon() {
       <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v6A2.5 2.5 0 0 1 16.5 15H10l-4 4v-4.5A2.5 2.5 0 0 1 5 12z"></path>
     </svg>
   `;
+}
+
+function renderBookmarksPopover(site) {
+  if (state.bookmarkedRiskIds.length === 0) {
+    return `
+      <div class="bookmarks-popover-empty">
+        <p>No bookmarked risks yet.</p>
+        <p class="bookmarks-empty-hint">Bookmark risks during your review to quickly revisit important findings.</p>
+      </div>
+    `;
+  }
+
+  const bookmarkedRisks = site.allDomainRisks.filter((risk) =>
+    state.bookmarkedRiskIds.includes(risk.id)
+  );
+
+  const grouped = {
+    High: [],
+    Medium: [],
+    Low: [],
+  };
+
+  bookmarkedRisks.forEach((risk) => {
+    const severity = risk.severity || "Low";
+    if (grouped[severity]) {
+      grouped[severity].push(risk);
+    }
+  });
+
+  let html = `<div class="bookmarks-popover-content">
+    <div class="bookmarks-header">
+      <h4>Bookmarks</h4>
+      <span class="bookmarks-count">${state.bookmarkedRiskIds.length}</span>
+    </div>
+    <div class="bookmarks-list">`;
+
+  ["High", "Medium", "Low"].forEach((severity) => {
+    grouped[severity].forEach((risk) => {
+      html += `
+        <div class="bookmark-item" data-bookmark-item="${risk.id}">
+          <div class="bookmark-item-header">
+            <span class="bookmark-title">${escapeHtml(risk.statement || risk.title)}</span>
+            <button class="bookmark-remove" type="button" data-remove-bookmark="${risk.id}" aria-label="Remove bookmark">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="bookmark-meta">
+            <span class="bookmark-severity bookmark-severity-${severity.toLowerCase()}">${severity}</span>
+            <span class="bookmark-category">${risk.domainKey || "Unknown"}</span>
+          </div>
+        </div>
+      `;
+    });
+  });
+
+  html += `</div></div>`;
+  return html;
 }
 
 function renderNotePopover(riskId) {
