@@ -665,15 +665,9 @@ button {
   font-size: 14px;
 }
 
-.evidence-link::after,
-.source-link::before {
+.evidence-link::after {
   content: "↗";
   margin-left: 6px;
-}
-
-.source-link::before {
-  margin-left: 0;
-  margin-right: 8px;
 }
 
 .checklist-card {
