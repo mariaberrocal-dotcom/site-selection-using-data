@@ -1371,10 +1371,38 @@ button {
   align-items: center;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #edf3ff;
-  color: #4878f2;
   font-size: 12px;
   font-weight: 600;
+}
+
+.impact-tag.cost {
+  background: #ffe8e8;
+  color: #d94b3d;
+}
+
+.impact-tag.schedule {
+  background: #f0e8ff;
+  color: #8b5cf6;
+}
+
+.impact-tag.permitting {
+  background: #fff1e8;
+  color: #c76b29;
+}
+
+.impact-tag.buildability {
+  background: #e8f5e9;
+  color: #2f8a4c;
+}
+
+.impact-tag.operations {
+  background: #e8f7ff;
+  color: #0c7fa8;
+}
+
+.impact-tag.utilities {
+  background: #f0f0f0;
+  color: #5a6269;
 }
 
 .category-summary {

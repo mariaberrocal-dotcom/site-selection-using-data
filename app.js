@@ -1340,7 +1340,10 @@ function renderFullRiskMarkup(risk) {
   const note = getRiskNote(risk.id);
   const noteEditorOpen = state.activeNoteRiskId === risk.id;
   const impactTags = (risk.impactAreas || [])
-    .map((area) => `<span class="impact-tag">${area}</span>`)
+    .map((area) => {
+      const className = area.toLowerCase().replace(/\s+/g, "");
+      return `<span class="impact-tag ${className}">${area}</span>`;
+    })
     .join("");
 
   return `
