@@ -8,7 +8,7 @@ const state = {
   focusRisk: null,
   flaggedRiskIds: [],
   summaryRiskView: "grid",
-  fullRiskView: "list",
+  fullRiskView: "grid",
   riskNotes: {},
   activeNoteRiskId: null,
   previousView: null,
