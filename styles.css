@@ -339,7 +339,7 @@ button {
   background: transparent;
   color: var(--text-soft);
   font-size: 14px;
-  padding: 16px 0 12px;
+  padding: 0 0 12px;
   border-bottom: 3px solid transparent;
 }
 
