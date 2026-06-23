@@ -11,6 +11,7 @@ const state = {
   fullRiskView: "list",
   riskNotes: {},
   activeNoteRiskId: null,
+  previousView: null,
 };
 
 const elements = {
@@ -88,6 +89,7 @@ function render() {
   renderSummary(normalized);
   renderFull(normalized);
   renderMap(normalized);
+  renderReturnButton();
   highlightTarget();
 }
 
@@ -233,6 +235,11 @@ function wireSummaryRiskCards(risks) {
       return;
     }
     button.addEventListener("click", () => {
+      state.previousView = {
+        tab: state.tab,
+        scrollPosition: elements.summaryPanel.scrollTop,
+        summaryRiskView: state.summaryRiskView,
+      };
       state.tab = "full";
       state.selectedDomainKey = risk.domainKey;
       state.focusDomain = risk.domainKey;
@@ -1181,4 +1188,50 @@ function titleCase(value) {
   return String(value)
     .replace(/[_-]+/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function renderReturnButton() {
+  let button = document.querySelector("#returnToPreviousView");
+
+  if (!state.previousView) {
+    if (button) button.remove();
+    return;
+  }
+
+  if (!button) {
+    button = document.createElement("button");
+    button.id = "returnToPreviousView";
+    button.className = "return-button";
+    button.setAttribute("aria-label", "Return to previous view");
+    document.body.appendChild(button);
+    button.addEventListener("click", returnToPreviousView);
+  }
+
+  const viewLabel = state.previousView.tab === "summary" ? "Summary Evaluation" : "Map";
+  button.innerHTML = `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    <span>Back to ${viewLabel}</span>
+  `;
+}
+
+function returnToPreviousView() {
+  if (!state.previousView) return;
+
+  state.tab = state.previousView.tab;
+  state.summaryRiskView = state.previousView.summaryRiskView || "grid";
+  state.focusDomain = null;
+  state.focusRisk = null;
+  const scrollPos = state.previousView.scrollPosition;
+  state.previousView = null;
+
+  render();
+
+  requestAnimationFrame(() => {
+    const panel = state.tab === "summary" ? elements.summaryPanel : elements.mapPanel;
+    if (panel) {
+      panel.scrollTop = scrollPos;
+    }
+  });
 }

@@ -1313,6 +1313,45 @@ button {
   color: var(--text-strong);
 }
 
+.return-button {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(72, 120, 242, 0.3);
+  transition: all 200ms ease;
+}
+
+.return-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(72, 120, 242, 0.4);
+}
+
+.return-button:active {
+  transform: translateY(0);
+}
+
+.return-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 @media (max-width: 1200px) {
   .risk-grid,
   .map-layout,
