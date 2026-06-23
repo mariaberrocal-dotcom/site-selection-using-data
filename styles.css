@@ -1208,32 +1208,35 @@ button {
   opacity: 1;
 }
 
-[data-note-content]::after {
+.note-button[data-note-content] {
+  position: relative;
+}
+
+.note-button[data-note-content]::after {
   content: attr(data-note-content);
   position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: calc(100% + 12px);
+  left: 0;
+  width: 320px;
   background: #ffffff;
   color: #2f3640;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid #e3e8f2;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #e0e0e0;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
-  max-width: 380px;
   z-index: 1000;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   visibility: hidden;
   opacity: 0;
-  transition: opacity 60ms ease, visibility 60ms ease;
+  transition: opacity 100ms ease, visibility 100ms ease;
   pointer-events: none;
 }
 
-[data-note-content]:hover::after {
+.note-button[data-note-content]:hover::after {
   visibility: visible;
   opacity: 1;
 }
