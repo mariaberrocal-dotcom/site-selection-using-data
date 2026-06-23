@@ -1546,6 +1546,105 @@ button {
   background: #3a62d4;
 }
 
+.temperature-profile {
+  margin-bottom: 28px;
+}
+
+.temperature-profile h4 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.temp-source {
+  margin: 0 0 16px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.temperature-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.temp-stat-item {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.monthly-temperatures {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.monthly-temperatures h5 {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.temperature-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.temperature-table thead {
+  background: var(--surface-alt);
+}
+
+.temperature-table th {
+  padding: 10px 12px;
+  text-align: left;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line);
+}
+
+.temperature-table td {
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+}
+
+.temperature-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.temperature-table tbody tr:hover {
+  background: var(--surface-soft);
+}
+
+.month-label {
+  font-weight: 600;
+  color: var(--text-strong);
+  min-width: 45px;
+}
+
+.temp-value {
+  text-align: right;
+}
+
+.temp-unit {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-left: 2px;
+}
+
 @media (max-width: 1200px) {
   .risk-grid,
   .map-layout,
@@ -1557,6 +1656,10 @@ button {
 
   .full-eval-shell {
     grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .temperature-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -1604,5 +1707,9 @@ button {
 
   .search-field {
     width: 100%;
+  }
+
+  .temperature-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -357,6 +357,89 @@ function generateExecutiveAssessment(risks) {
   );
 }
 
+function renderTemperatureProfile(profile) {
+  if (!profile) {
+    return "";
+  }
+
+  const monthlyTableRows = profile.monthlyData
+    .map(
+      (month) => `
+        <tr>
+          <td class="month-label">${month.month}</td>
+          <td class="temp-value">${month.high.f}°<span class="temp-unit">F</span></td>
+          <td class="temp-value">${month.low.f}°<span class="temp-unit">F</span></td>
+        </tr>
+      `
+    )
+    .join("");
+
+  return `
+    <section class="temperature-profile">
+      <h4>Temperature Profile</h4>
+      <p class="temp-source">Historical data from Open-Meteo (ERSA)</p>
+
+      <div class="temperature-stats">
+        <div class="temp-stat-item">
+          <span class="stat-label">Annual Average</span>
+          <span class="stat-value">${profile.annualAverage.f}°F / ${profile.annualAverage.c}°C</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Record High (${profile.recordHigh.year})</span>
+          <span class="stat-value">${profile.recordHigh.value.f}°F / ${profile.recordHigh.value.c}°C</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Record Low (${profile.recordLow.year})</span>
+          <span class="stat-value">${profile.recordLow.value.f}°F / ${profile.recordLow.value.c}°C</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Extreme Heat Days (+${profile.extremeHeatDays.f}°F / ${profile.extremeHeatDays.c}°C)</span>
+          <span class="stat-value">38.1</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Extreme Cold Days (${profile.extremeColdDays.f}°F / ${profile.extremeColdDays.c}°C)</span>
+          <span class="stat-value">20.2</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Cooling Degree Days (base 65°F)</span>
+          <span class="stat-value">${profile.coolingDegreeDays.toLocaleString()}</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Heating Degree Days (base 65°F)</span>
+          <span class="stat-value">${profile.heatingDegreeDays.toLocaleString()}</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Peak Apparent Temp (10-yr max)</span>
+          <span class="stat-value">${profile.peakApparentTemp.f}°F / ${profile.peakApparentTemp.c}°C</span>
+        </div>
+      </div>
+
+      <div class="monthly-temperatures">
+        <h5>Monthly Average High / Low (10-year)</h5>
+        <table class="temperature-table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>High</th>
+              <th>Low</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${monthlyTableRows}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
 function renderCategorySummary(domain, risks) {
   if (!risks || risks.length === 0) {
     return "";
@@ -375,6 +458,37 @@ function renderCategorySummary(domain, risks) {
       </div>
     </section>
   `;
+}
+
+function getTemperatureProfile(domain) {
+  if (!domain || domain.key !== "climate") {
+    return null;
+  }
+
+  return {
+    annualAverage: { f: 66.7, c: 19.3 },
+    recordHigh: { value: { f: 109.4, c: 43 }, year: 1980 },
+    recordLow: { value: { f: -3.8, c: -19.9 }, year: 2021 },
+    extremeHeatDays: { f: 80, c: 38 },
+    extremeColdDays: { f: 0, c: -32 },
+    coolingDegreeDays: 1402,
+    heatingDegreeDays: 1082,
+    peakApparentTemp: { f: 113.2, c: 45.1 },
+    monthlyData: [
+      { month: "Jan", high: { f: 53.3, c: 11.8 }, low: { f: 36.5, c: 2.5 } },
+      { month: "Feb", high: { f: 60.8, c: 16 }, low: { f: 43.3, c: 6.3 } },
+      { month: "Mar", high: { f: 71.1, c: 21.7 }, low: { f: 50.3, c: 10.2 } },
+      { month: "Apr", high: { f: 76.7, c: 24.8 }, low: { f: 55.8, c: 13.2 } },
+      { month: "May", high: { f: 82.6, c: 28.1 }, low: { f: 64.2, c: 17.9 } },
+      { month: "Jun", high: { f: 90.7, c: 32.6 }, low: { f: 72.5, c: 22.5 } },
+      { month: "Jul", high: { f: 94.6, c: 34.8 }, low: { f: 76.4, c: 24.7 } },
+      { month: "Aug", high: { f: 94.1, c: 34.5 }, low: { f: 76.2, c: 24.6 } },
+      { month: "Sep", high: { f: 87.8, c: 31 }, low: { f: 70, c: 21.1 } },
+      { month: "Oct", high: { f: 78.6, c: 25.9 }, low: { f: 58.1, c: 14.5 } },
+      { month: "Nov", high: { f: 66.7, c: 19.3 }, low: { f: 48.4, c: 9.1 } },
+      { month: "Dec", high: { f: 56, c: 13.3 }, low: { f: 42.1, c: 5.6 } },
+    ],
+  };
 }
 
 function generateSiteExecutiveSummary(site) {
@@ -474,6 +588,7 @@ function renderFull(site) {
     ? `
       <section class="full-category-pane" id="domain-${selectedDomain.key}" data-domain="${selectedDomain.key}">
         ${categorySummary}
+        ${selectedDomain.temperatureProfile ? renderTemperatureProfile(selectedDomain.temperatureProfile) : ""}
         <nav class="section-quicknav" aria-label="Category sections">
           <a href="#section-risks" class="section-quicknav-item">Identified Risks (${selectedDomain.risks.length})</a>
           <a href="#section-findings" class="section-quicknav-item">Key Findings (${selectedDomain.keyFindings.length})</a>
@@ -687,6 +802,7 @@ function normalizeSite(site) {
       ),
       sources: dedupeSources(domain.sources || []),
       risks: (domain.risks || []).map((risk) => normalizeRisk(risk, key)),
+      temperatureProfile: getTemperatureProfile(domain),
       searchText: [
         key,
         domain.domainTitle,
