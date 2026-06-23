@@ -127,6 +127,19 @@
           <div class="risk-card-actions">
             <button class="flag-button" type="button" data-flag-risk="" aria-label="Flag risk"></button>
             <button class="note-button" type="button" data-note-risk="" aria-label="Add note"></button>
+            <div class="risk-more-menu">
+              <button class="more-button" type="button" aria-label="More options" aria-haspopup="menu">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="5" r="2"/>
+                  <circle cx="12" cy="12" r="2"/>
+                  <circle cx="12" cy="19" r="2"/>
+                </svg>
+              </button>
+              <div class="more-menu-dropdown" role="menu">
+                <button class="more-menu-item" type="button" data-edit-risk="" role="menuitem">Edit</button>
+                <button class="more-menu-item danger" type="button" data-delete-risk="" role="menuitem">Delete</button>
+              </div>
+            </div>
           </div>
           <div class="category-chip"></div>
         </div>

@@ -157,6 +157,12 @@ function renderSummary(site) {
             if (note) {
               noteButton.setAttribute("data-note-content", note);
             }
+
+            const editBtn = fragment.querySelector("[data-edit-risk]");
+            const deleteBtn = fragment.querySelector("[data-delete-risk]");
+            if (editBtn) editBtn.dataset.editRisk = risk.id;
+            if (deleteBtn) deleteBtn.dataset.deleteRisk = risk.id;
+
             card.dataset.domain = risk.domainKey;
             card.dataset.riskId = risk.id;
             if (state.activeNoteRiskId === risk.id) {
@@ -1372,10 +1378,24 @@ function renderFullRiskMarkup(risk) {
               type="button"
               data-note-risk="${risk.id}"
               aria-label="${note ? "Edit note" : "Add note"}"
+              ${note ? `data-note-content="${escapeHtml(note)}"` : ""}
             >
               ${renderNoteIcon()}
             </button>
             ${note ? `<div class="note-tooltip">${escapeHtml(note)}</div>` : ""}
+          </div>
+          <div class="risk-more-menu">
+            <button class="more-button" type="button" data-more-menu="${risk.id}" aria-label="More options" aria-haspopup="menu">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+              </svg>
+            </button>
+            <div class="more-menu-dropdown" role="menu">
+              <button class="more-menu-item" type="button" data-edit-risk="${risk.id}" role="menuitem">Edit</button>
+              <button class="more-menu-item danger" type="button" data-delete-risk="${risk.id}" role="menuitem">Delete</button>
+            </div>
           </div>
           ${noteEditorOpen ? renderNotePopover(risk.id) : ""}
         </div>
@@ -1441,6 +1461,24 @@ function renderNotePopover(riskId) {
 }
 
 function wireRiskInteractions(container) {
+  [...container.querySelectorAll("[data-more-menu]")].forEach((button) => {
+    button.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const dropdown = button.nextElementSibling;
+      if (dropdown?.classList.contains("more-menu-dropdown")) {
+        dropdown.classList.toggle("is-open");
+      }
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    [...document.querySelectorAll(".more-menu-dropdown.is-open")].forEach((dropdown) => {
+      if (!dropdown.parentElement.contains(e.target)) {
+        dropdown.classList.remove("is-open");
+      }
+    });
+  });
+
   [...container.querySelectorAll("[data-flag-risk]")].forEach((button) => {
     button.addEventListener("click", () => {
       const riskId = button.dataset.flagRisk;
@@ -1486,6 +1524,25 @@ function wireRiskInteractions(container) {
       setRiskNote(riskId, textarea?.value || "");
       state.activeNoteRiskId = null;
       render();
+    });
+  });
+
+  [...container.querySelectorAll("[data-edit-risk]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const riskId = button.dataset.editRisk;
+      showToast("Edit risk feature coming soon");
+      // TODO: Implement edit risk functionality
+    });
+  });
+
+  [...container.querySelectorAll("[data-delete-risk]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const riskId = button.dataset.deleteRisk;
+      if (confirm("Are you sure you want to delete this risk?")) {
+        // TODO: Implement delete risk functionality
+        showToast("Risk deleted");
+        render();
+      }
     });
   });
 }
