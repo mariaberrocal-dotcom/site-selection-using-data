@@ -1133,11 +1133,6 @@ function renderFullRiskMarkup(risk) {
           >
             ${renderNoteIcon()}
           </button>
-          <button class="technical-details-toggle" type="button" data-technical-risk="${risk.id}" aria-label="Show technical details" title="Technical finding">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 8v8M8 12h8"></path>
-            </svg>
-          </button>
           ${noteEditorOpen ? renderNotePopover(risk.id) : ""}
         </div>
       </div>
@@ -1151,7 +1146,6 @@ function renderFullRiskMarkup(risk) {
         </div>
       </div>
       <h5 class="risk-statement">${risk.statement}</h5>
-      ${risk.title !== risk.statement ? `<div class="technical-details-content" data-technical-risk="${risk.id}" style="display: none;"><p class="technical-finding"><strong>Technical Finding:</strong> ${risk.title}</p></div>` : ""}
       ${impactTags ? `<div class="impact-tags">${impactTags}</div>` : ""}
       <p class="full-risk-text">${risk.summary}</p>
       <a class="text-link" href="${risk.sources[0]?.url || "#"}" target="_blank" rel="noreferrer noopener">Sources (${risk.sources.length})</a>
@@ -1222,17 +1216,6 @@ function wireRiskInteractions(container) {
       const riskId = button.dataset.noteRisk;
       state.activeNoteRiskId = state.activeNoteRiskId === riskId ? null : riskId;
       render();
-    });
-  });
-
-  [...container.querySelectorAll("[data-technical-risk]")].forEach((button) => {
-    button.addEventListener("click", () => {
-      const riskId = button.dataset.technicalRisk;
-      const detailsContent = container.querySelector(`[data-technical-risk="${CSS.escape(riskId)}"][style]`);
-      if (detailsContent) {
-        const isHidden = detailsContent.style.display === "none";
-        detailsContent.style.display = isHidden ? "block" : "none";
-      }
     });
   });
 

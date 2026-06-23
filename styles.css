@@ -1359,55 +1359,6 @@ button {
   color: var(--text-strong);
 }
 
-.technical-details-toggle {
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-soft);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  cursor: pointer;
-  transition: all 120ms ease;
-}
-
-.technical-details-toggle:hover {
-  background: var(--surface-alt);
-  color: var(--text);
-}
-
-.technical-details-toggle svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.technical-details-content {
-  margin: 12px 0 8px;
-  padding: 12px;
-  border-left: 3px solid var(--blue-soft);
-  background: var(--blue-soft);
-  border-radius: 8px;
-}
-
-.technical-finding {
-  margin: 0;
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.technical-finding strong {
-  color: var(--text-strong);
-}
-
 .impact-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1420,8 +1371,8 @@ button {
   align-items: center;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #f0eaff;
-  color: #765cff;
+  background: #edf3ff;
+  color: #4878f2;
   font-size: 12px;
   font-weight: 600;
 }
