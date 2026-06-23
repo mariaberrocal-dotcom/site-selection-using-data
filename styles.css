@@ -625,6 +625,12 @@ button {
   color: #2980ff;
 }
 
+.metric-value {
+  font-size: 14px;
+  color: var(--text-strong);
+  font-weight: 500;
+}
+
 .certainty-badge {
   padding: 4px 10px;
   background: var(--surface-alt);
@@ -1099,6 +1105,86 @@ button {
   animation: highlight-pulse 0.8s ease-out 2;
 }
 
+.severity-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.severity-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 420px;
+  overflow: hidden;
+}
+
+.severity-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.severity-modal-body {
+  padding: 20px;
+}
+
+.severity-modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-bottom: 8px;
+}
+
+.form-select,
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-strong);
+  background: #ffffff;
+  transition: border-color 100ms ease;
+}
+
+.form-select:hover,
+.form-input:hover {
+  border-color: var(--line-strong);
+}
+
+.form-select:focus,
+.form-input:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(72, 120, 242, 0.1);
+}
+
 .full-sidenav-list {
   display: grid;
   gap: 8px;
@@ -1322,6 +1408,70 @@ button {
   -webkit-line-clamp: 4;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.risk-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.impact-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-bottom: 8px;
+}
+
+.technical-details {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.technical-section {
+  margin-bottom: 16px;
+}
+
+.technical-section h6 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.technical-section p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.technical-sources {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.technical-sources li {
+  margin-bottom: 8px;
+}
+
+.technical-sources a {
+  font-size: 13px;
+  color: var(--blue);
+  text-decoration: none;
+  transition: color 100ms ease;
+}
+
+.technical-sources a:hover {
+  color: #3458d9;
+  text-decoration: underline;
 }
 
 .full-risk-row .text-link {

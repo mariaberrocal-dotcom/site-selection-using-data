@@ -9,7 +9,7 @@ const state = {
   promotedRiskIds: [],
   bookmarkedRiskIds: [],
   summaryRiskView: "grid",
-  fullRiskView: "grid",
+  fullRiskView: "list",
   riskNotes: {},
   activeNoteRiskId: null,
   previousView: null,
@@ -766,6 +766,88 @@ function renderFull(site) {
   wireTemperatureProfileToggle(elements.fullPanel);
   wireFullSectionSpy();
   wireBookmarksPopover(site);
+  wireRiskDetailsToggle(elements.fullPanel);
+  wireSeverityChange(elements.fullPanel);
+}
+
+function wireRiskDetailsToggle(container) {
+  [...container.querySelectorAll("[data-toggle-technical]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const riskId = button.dataset.toggleTechnical;
+      const details = container.querySelector(`[data-technical-details="${riskId}"]`);
+      if (details) {
+        const isOpen = details.style.display !== "none";
+        details.style.display = isOpen ? "none" : "block";
+        button.textContent = isOpen ? "Show technical details" : "Hide technical details";
+      }
+    });
+  });
+}
+
+function wireSeverityChange(container) {
+  [...container.querySelectorAll("[data-change-severity]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const riskId = button.dataset.changeSeverity;
+      const risk = state.site?.allDomainRisks?.find((r) => r.id === riskId);
+      if (risk) {
+        showSeverityChangeModal(risk);
+      }
+    });
+  });
+}
+
+function showSeverityChangeModal(risk) {
+  const modal = document.createElement("div");
+  modal.className = "severity-modal-overlay";
+  modal.innerHTML = `
+    <div class="severity-modal">
+      <div class="severity-modal-header">
+        <span class="severity-badge ${risk.severity.toLowerCase()}">${risk.severity}</span>
+      </div>
+      <div class="severity-modal-body">
+        <div class="form-group">
+          <label for="severity-select">Severity</label>
+          <select id="severity-select" class="form-select">
+            <option value="High" ${risk.severity === "High" ? "selected" : ""}>High</option>
+            <option value="Medium" ${risk.severity === "Medium" ? "selected" : ""}>Medium</option>
+            <option value="Low" ${risk.severity === "Low" ? "selected" : ""}>Low</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="severity-reason">Reason (optional)</label>
+          <input type="text" id="severity-reason" class="form-input" placeholder="Why are you changing this?">
+        </div>
+      </div>
+      <div class="severity-modal-footer">
+        <button type="button" class="secondary-button severity-modal-cancel">Cancel</button>
+        <button type="button" class="primary-button severity-modal-save">Save</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const select = modal.querySelector("#severity-select");
+  const input = modal.querySelector("#severity-reason");
+  const cancelBtn = modal.querySelector(".severity-modal-cancel");
+  const saveBtn = modal.querySelector(".severity-modal-save");
+
+  cancelBtn.addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  saveBtn.addEventListener("click", () => {
+    const newSeverity = select.value;
+    const reason = input.value;
+    risk.severity = newSeverity;
+    if (reason) {
+      risk.severityChangeReason = reason;
+    }
+    modal.remove();
+    render();
+    showToast(`Risk severity changed to ${newSeverity}`);
+  });
 }
 
 function wireBookmarksPopover(site) {
@@ -1030,6 +1112,7 @@ function normalizeRisk(risk, domainKey) {
     domainKey: domainKey || guessDomainKey(category),
     sources: dedupeSources(risk.sources || []),
     impactAreas,
+    jurisdiction: risk.jurisdiction || "Unknown",
     searchText: [
       risk.title,
       risk.so_what,
@@ -1541,17 +1624,40 @@ function renderFullRiskMarkup(risk) {
       </div>
       <div class="risk-metrics full-risk-metrics">
         <div class="metric-pair">
-          <span class="severity-badge ${risk.severity.toLowerCase()}">${risk.severity}</span>
+          <button class="severity-badge ${risk.severity.toLowerCase()}" type="button" data-change-severity="${risk.id}" style="border: none; cursor: pointer; background: inherit; font-weight: inherit; padding: inherit; border-radius: inherit;">
+            ${risk.severity}
+          </button>
         </div>
         <div class="metric-pair certainty-pair">
           <span class="metric-label">Certainty:</span>
           <span class="certainty-badge">${risk.certainty}%</span>
         </div>
+        <div class="metric-pair">
+          <span class="metric-label">Jurisdiction:</span>
+          <span class="metric-value">${risk.jurisdiction || "N/A"}</span>
+        </div>
       </div>
       <h5 class="risk-statement">${risk.statement}</h5>
-      ${impactTags ? `<div class="impact-tags">${impactTags}</div>` : ""}
       <p class="full-risk-text">${risk.summary}</p>
-      <a class="text-link" href="${risk.sources[0]?.url || "#"}" target="_blank" rel="noreferrer noopener">Sources (${risk.sources.length})</a>
+      ${impactTags ? `<div class="impact-tags"><span class="impact-label">Impact</span>${impactTags}</div>` : ""}
+      <div class="risk-card-footer">
+        <a class="text-link" href="${risk.sources[0]?.url || "#"}" target="_blank" rel="noreferrer noopener">Sources (${risk.sources.length})</a>
+        <button class="text-link" type="button" data-toggle-technical="${risk.id}">Show technical details</button>
+      </div>
+      <div class="technical-details" data-technical-details="${risk.id}" style="display: none;">
+        <div class="technical-section">
+          <h6>Technical Finding</h6>
+          <p>${escapeHtml(risk.title)}</p>
+        </div>
+        ${risk.sources && risk.sources.length > 0 ? `
+          <div class="technical-section">
+            <h6>Evidence</h6>
+            <ul class="technical-sources">
+              ${risk.sources.map((s) => `<li><a href="${s.url}" target="_blank" rel="noreferrer noopener">${escapeHtml(s.title || s.url)}</a></li>`).join("")}
+            </ul>
+          </div>
+        ` : ""}
+      </div>
     </article>
   `;
 }
