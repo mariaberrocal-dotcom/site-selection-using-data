@@ -469,6 +469,7 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   align-items: stretch;
+  overflow: visible;
 }
 
 .risk-grid.is-list {
@@ -493,6 +494,7 @@ button {
   min-height: 360px;
   height: 100%;
   box-shadow: 0 1px 0 rgba(8, 15, 30, 0.02);
+  overflow: visible;
 }
 
 .risk-card-top,
@@ -1043,6 +1045,7 @@ button {
 .full-risk-row {
   display: flex;
   flex-direction: column;
+  overflow: visible;
 }
 
 .full-risk-list.is-grid .full-risk-row {
