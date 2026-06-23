@@ -250,95 +250,108 @@ function wireSummaryRiskCards(risks) {
   });
 }
 
+function generatePrimaryConsiderations(domain, risks) {
+  if (!risks || risks.length === 0) {
+    return [];
+  }
+
+  const considerations = new Map();
+
+  const considerationPatterns = [
+    {
+      theme: "Environmental and contamination concerns",
+      keywords: /contamination|environmental|remediation|superfund|asbestos|lead|mold|hazardous|plume|npl/i,
+    },
+    {
+      theme: "Wetland and habitat constraints",
+      keywords: /wetland|habitat|species|protected|ecological|preserve|riparian|floodplain/i,
+    },
+    {
+      theme: "Zoning, permitting, and regulatory requirements",
+      keywords: /zoning|permit|permitting|variance|rezoning|entitlement|approval|hearing|litigation|master plan/i,
+    },
+    {
+      theme: "Utility infrastructure and capacity",
+      keywords: /utility|power|energy|water|wastewater|fiber|connectivity|electrical|capacity|grid|substation/i,
+    },
+    {
+      theme: "Physical site constraints and constructability",
+      keywords: /constructability|access|geotechnical|slope|stabilization|soil|foundation|buildable|parcel|structure/i,
+    },
+    {
+      theme: "Climate and natural hazard resilience",
+      keywords: /flood|flood zone|seismic|earthquake|storm|hazard|climate|wildfire|drought|inundation/i,
+    },
+    {
+      theme: "Community and stakeholder engagement",
+      keywords: /community|stakeholder|opposition|social license|engagement|neighborhood|local government|elected/i,
+    },
+    {
+      theme: "Financial and cost implications",
+      keywords: /financial|cost|budget|tax|incentive|financing|insurance|ciac|premium/i,
+    },
+  ];
+
+  risks.forEach((risk) => {
+    const riskText = [risk.title, risk.statement, risk.summary]
+      .filter(Boolean)
+      .join(" ");
+
+    considerationPatterns.forEach((pattern) => {
+      if (pattern.keywords.test(riskText)) {
+        if (!considerations.has(pattern.theme)) {
+          considerations.set(pattern.theme, []);
+        }
+        if (!considerations.get(pattern.theme).includes(risk)) {
+          considerations.get(pattern.theme).push(risk);
+        }
+      }
+    });
+  });
+
+  const result = [];
+  considerations.forEach((risks, theme) => {
+    if (risks.length > 0) {
+      result.push({ theme, riskCount: risks.length });
+    }
+  });
+
+  return result.slice(0, 5);
+}
+
 function renderCategorySummary(domain, risks) {
   if (!risks || risks.length === 0) {
     return "";
   }
 
-  const severityDistribution = {
-    high: risks.filter((r) => r.severity === "High").length,
-    medium: risks.filter((r) => r.severity === "Medium").length,
-    low: risks.filter((r) => r.severity === "Low").length,
-  };
+  const considerations = generatePrimaryConsiderations(domain, risks);
 
-  let overallRisk = "Low";
-  if (severityDistribution.high > 0) {
-    overallRisk = "High";
-  } else if (severityDistribution.medium > risks.length / 3) {
-    overallRisk = "Medium";
-  }
-
-  const topRisks = risks
-    .sort(
-      (a, b) =>
-        getSeverityRank(b.severity) - getSeverityRank(a.severity) ||
-        Number(b.certainty) - Number(a.certainty)
-    )
-    .slice(0, 3);
-
-  const allImpactAreas = new Set();
-  risks.forEach((risk) => {
-    (risk.impactAreas || []).forEach((area) => allImpactAreas.add(area));
-  });
-
-  const impactSummary = Array.from(allImpactAreas).map((area) => {
-    const affectedRisks = risks.filter((r) => (r.impactAreas || []).includes(area));
-    const maxSeverity = affectedRisks.reduce(
-      (max, r) => (getSeverityRank(r.severity) > getSeverityRank(max.severity) ? r : max),
-      affectedRisks[0]
-    );
-    return { area, severity: maxSeverity.severity };
-  });
-
-  const impactMarkup = impactSummary
-    .map(
-      (impact) => `
-        <div class="impact-summary-item">
-          <span class="impact-area-label">${impact.area}:</span>
-          <span class="severity-badge ${impact.severity.toLowerCase()}">${impact.severity}</span>
-        </div>
-      `
-    )
-    .join("");
-
-  const topRisksMarkup = topRisks
-    .map(
-      (risk) => `
-        <li class="category-summary-risk">
-          <span class="risk-title-summary">${risk.statement}</span>
-        </li>
-      `
-    )
+  const considerationsList = considerations
+    .map(({ theme }) => `<li>${theme} may require additional planning and coordination.</li>`)
     .join("");
 
   return `
     <section class="category-summary">
-      <div class="category-summary-head">
-        <div>
-          <h3>${domain.navLabel}</h3>
-          <p class="category-summary-text">${domain.summary}</p>
+      <h3 class="category-summary-title">${domain.navLabel}</h3>
+
+      <div class="category-summary-body">
+        <div class="executive-assessment">
+          <h4>Executive Assessment</h4>
+          <p>${domain.summary}</p>
         </div>
-      </div>
 
-      <div class="category-summary-grid">
-        <article class="summary-card">
-          <span class="summary-card-label">Overall Risk</span>
-          <span class="severity-badge ${overallRisk.toLowerCase()}">${overallRisk}</span>
-        </article>
-
-        <article class="summary-card">
-          <span class="summary-card-label">Top Risk Drivers</span>
-          <ul class="category-summary-risks">
-            ${topRisksMarkup}
-          </ul>
-        </article>
-
-        <article class="summary-card">
-          <span class="summary-card-label">Expected Impacts</span>
-          <div class="impact-summary">
-            ${impactMarkup}
+        ${
+          considerations.length > 0
+            ? `
+          <div class="primary-considerations">
+            <h4>Primary Development Considerations</h4>
+            <ul class="considerations-list">
+              ${considerationsList}
+            </ul>
           </div>
-        </article>
+        `
+            : ""
+        }
       </div>
     </section>
   `;
