@@ -1159,6 +1159,50 @@ button {
   stroke-linejoin: round;
 }
 
+.note-button-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.note-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  background: #2f3640;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 280px;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.note-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid #2f3640;
+}
+
+.note-button-wrapper:hover .note-tooltip {
+  opacity: 1;
+}
+
 .note-popover {
   position: absolute;
   top: 38px;

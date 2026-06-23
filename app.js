@@ -1363,15 +1363,17 @@ function renderFullRiskMarkup(risk) {
           <button class="flag-button ${isFlaggedRisk(risk.id) ? "is-active" : ""}" type="button" data-flag-risk="${risk.id}" aria-label="Flag risk">
             ${renderFlagIcon()}
           </button>
-          <button
-            class="note-button ${note ? "has-note" : ""} ${noteEditorOpen ? "is-open" : ""}"
-            type="button"
-            data-note-risk="${risk.id}"
-            aria-label="${note ? "Edit note" : "Add note"}"
-            title="${note ? escapeHtml(note) : "Add note"}"
-          >
-            ${renderNoteIcon()}
-          </button>
+          <div class="note-button-wrapper">
+            <button
+              class="note-button ${note ? "has-note" : ""} ${noteEditorOpen ? "is-open" : ""}"
+              type="button"
+              data-note-risk="${risk.id}"
+              aria-label="${note ? "Edit note" : "Add note"}"
+            >
+              ${renderNoteIcon()}
+            </button>
+            ${note ? `<div class="note-tooltip">${escapeHtml(note)}</div>` : ""}
+          </div>
           ${noteEditorOpen ? renderNotePopover(risk.id) : ""}
         </div>
       </div>
