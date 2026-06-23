@@ -780,7 +780,7 @@ function normalizeSite(site) {
       item.status.toLowerCase().includes("complete")
     ).length;
 
-    return {
+    const normalizedDomain = {
       key,
       label: domain.domainTitle || key,
       title: titleCase(domain.domainTitle || key),
@@ -802,7 +802,7 @@ function normalizeSite(site) {
       ),
       sources: dedupeSources(domain.sources || []),
       risks: (domain.risks || []).map((risk) => normalizeRisk(risk, key)),
-      temperatureProfile: getTemperatureProfile(domain),
+      temperatureProfile: getTemperatureProfile({ key }),
       searchText: [
         key,
         domain.domainTitle,
@@ -814,6 +814,8 @@ function normalizeSite(site) {
         .join(" ")
         .toLowerCase(),
     };
+
+    return normalizedDomain;
   });
   const domainOrder = [
     "land",
