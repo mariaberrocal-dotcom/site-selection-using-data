@@ -208,9 +208,8 @@ button {
   justify-content: space-between;
   gap: 20px;
   align-items: flex-start;
-  border-style: none;
-  border-width: 1px;
-  border-bottom: none;
+  border: none;
+  border-bottom: 1px solid rgba(144, 19, 254, 1);
 }
 
 .header-title-section {
@@ -330,8 +329,7 @@ button {
 }
 
 .tab-bar {
-  border-top: 1px solid rgba(0, 0, 0, 0.03);
-  border-bottom: 1px solid var(--line);
+  border: 0;
   padding: 0 20px;
   display: flex;
   gap: 26px;
