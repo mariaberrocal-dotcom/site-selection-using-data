@@ -132,7 +132,8 @@ function renderSummary(site) {
             severity.textContent = risk.severity;
             severity.classList.add(risk.severity.toLowerCase());
             certainty.textContent = `${risk.certainty}%`;
-            title.textContent = risk.title;
+            title.textContent = risk.statement || risk.title;
+            title.setAttribute("title", risk.title !== risk.statement ? `Technical: ${risk.title}` : "");
             text.textContent = risk.summary;
             source.textContent = `Sources (${risk.sources.length})`;
             source.href = risk.sources[0]?.url || "#";
@@ -249,6 +250,100 @@ function wireSummaryRiskCards(risks) {
   });
 }
 
+function renderCategorySummary(domain, risks) {
+  if (!risks || risks.length === 0) {
+    return "";
+  }
+
+  const severityDistribution = {
+    high: risks.filter((r) => r.severity === "High").length,
+    medium: risks.filter((r) => r.severity === "Medium").length,
+    low: risks.filter((r) => r.severity === "Low").length,
+  };
+
+  let overallRisk = "Low";
+  if (severityDistribution.high > 0) {
+    overallRisk = "High";
+  } else if (severityDistribution.medium > risks.length / 3) {
+    overallRisk = "Medium";
+  }
+
+  const topRisks = risks
+    .sort(
+      (a, b) =>
+        getSeverityRank(b.severity) - getSeverityRank(a.severity) ||
+        Number(b.certainty) - Number(a.certainty)
+    )
+    .slice(0, 3);
+
+  const allImpactAreas = new Set();
+  risks.forEach((risk) => {
+    (risk.impactAreas || []).forEach((area) => allImpactAreas.add(area));
+  });
+
+  const impactSummary = Array.from(allImpactAreas).map((area) => {
+    const affectedRisks = risks.filter((r) => (r.impactAreas || []).includes(area));
+    const maxSeverity = affectedRisks.reduce(
+      (max, r) => (getSeverityRank(r.severity) > getSeverityRank(max.severity) ? r : max),
+      affectedRisks[0]
+    );
+    return { area, severity: maxSeverity.severity };
+  });
+
+  const impactMarkup = impactSummary
+    .map(
+      (impact) => `
+        <div class="impact-summary-item">
+          <span class="impact-area-label">${impact.area}:</span>
+          <span class="severity-badge ${impact.severity.toLowerCase()}">${impact.severity}</span>
+        </div>
+      `
+    )
+    .join("");
+
+  const topRisksMarkup = topRisks
+    .map(
+      (risk) => `
+        <li class="category-summary-risk">
+          <span class="risk-title-summary">${risk.statement}</span>
+        </li>
+      `
+    )
+    .join("");
+
+  return `
+    <section class="category-summary">
+      <div class="category-summary-head">
+        <div>
+          <h3>${domain.navLabel}</h3>
+          <p class="category-summary-text">${domain.summary}</p>
+        </div>
+      </div>
+
+      <div class="category-summary-grid">
+        <article class="summary-card">
+          <span class="summary-card-label">Overall Risk</span>
+          <span class="severity-badge ${overallRisk.toLowerCase()}">${overallRisk}</span>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-card-label">Top Risk Drivers</span>
+          <ul class="category-summary-risks">
+            ${topRisksMarkup}
+          </ul>
+        </article>
+
+        <article class="summary-card">
+          <span class="summary-card-label">Expected Impacts</span>
+          <div class="impact-summary">
+            ${impactMarkup}
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
+}
+
 function renderFull(site) {
   const visibleDomains = site.domains.filter((domain) =>
     matchesSearch(domain.searchText)
@@ -284,16 +379,12 @@ function renderFull(site) {
       )
     : [];
 
+  const categorySummary = selectedDomain ? renderCategorySummary(selectedDomain, visibleRisks) : "";
+
   const bodyMarkup = selectedDomain
     ? `
       <section class="full-category-pane" id="domain-${selectedDomain.key}" data-domain="${selectedDomain.key}">
-        <div class="full-category-head">
-          <div>
-            <h3>${selectedDomain.navLabel}</h3>
-            <p class="domain-summary">${selectedDomain.summary}</p>
-          </div>
-        </div>
-
+        ${categorySummary}
         <nav class="section-quicknav" aria-label="Category sections">
           <a href="#section-risks" class="section-quicknav-item">Identified Risks (${selectedDomain.risks.length})</a>
           <a href="#section-findings" class="section-quicknav-item">Key Findings (${selectedDomain.keyFindings.length})</a>
@@ -603,9 +694,14 @@ function normalizeRisk(risk, domainKey) {
     Number(risk.confidence) ||
     67;
 
+  const title = risk.title || "Untitled risk";
+  const statement = getRiskStatement(risk, title, category);
+  const impactAreas = getImpactAreas(risk, title, category);
+
   return {
     id: risk.id || crypto.randomUUID(),
-    title: risk.title || "Untitled risk",
+    title,
+    statement,
     summary:
       risk.so_what ||
       risk.description_plain ||
@@ -621,6 +717,7 @@ function normalizeRisk(risk, domainKey) {
     certainty,
     domainKey: domainKey || guessDomainKey(category),
     sources: dedupeSources(risk.sources || []),
+    impactAreas,
     searchText: [
       risk.title,
       risk.so_what,
@@ -635,6 +732,102 @@ function normalizeRisk(risk, domainKey) {
       .join(" ")
       .toLowerCase(),
   };
+}
+
+function getRiskStatement(risk, title, category) {
+  const haystack = [title, category, risk.so_what, risk.description_plain, risk.description]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  const statements = {
+    "npl site": "Environmental remediation obligations may increase development costs",
+    "groundwater monitoring": "Existing monitoring wells may restrict construction activities",
+    "contamination migration": "Potential contaminant migration may require additional environmental review",
+    "superfund": "Proximity to contaminated sites may trigger additional regulatory oversight",
+    "wetland": "Wetland constraints may limit buildable area and require permitting",
+    "protected habitat": "Protected species habitat may restrict development activities and timelines",
+    "flood zone": "Flood risk may require elevated construction and impact insurability",
+    "seismic": "Seismic activity may require specialized foundation design",
+    "radon": "Radon exposure may require mitigation and ongoing monitoring",
+    "zoning variance": "Requested zoning variance may face community opposition or approval delays",
+    "permit": "Required permits may introduce schedule risk and approval uncertainty",
+    "utility connection": "Utility infrastructure constraints may require costly extensions or upgrades",
+    "power capacity": "Electrical capacity upgrades may be required and create schedule risk",
+    "water allocation": "Water allocation limits may restrict operational demands",
+    "connectivity": "Limited fiber or network infrastructure may affect operational efficiency",
+    "environmental remediation": "Active remediation requirements may create operational and cost impacts",
+    "asbestos": "Asbestos abatement may be required before demolition or renovation",
+    "lead": "Lead remediation or containment may be required during construction",
+    "mold": "Mold remediation may delay occupancy or increase construction scope",
+    "adjacent property": "Conditions on adjacent properties may affect development feasibility",
+    "noise": "Noise restrictions may limit operational hours or require mitigation",
+    "air quality": "Air quality standards may require operational controls or monitoring",
+    "market": "Market conditions may affect project viability or investment returns",
+    "financing": "Financing challenges may constrain project delivery or scope",
+  };
+
+  for (const [pattern, statement] of Object.entries(statements)) {
+    if (haystack.includes(pattern)) {
+      return statement;
+    }
+  }
+
+  return title;
+}
+
+function getImpactAreas(risk, title, category) {
+  const haystack = [title, category, risk.so_what, risk.description_plain, risk.description]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  const impacts = new Set();
+
+  if (/contamination|remediation|environmental|asbestos|lead|mold|hazardous/.test(haystack)) {
+    impacts.add("Cost");
+    impacts.add("Schedule");
+    impacts.add("Permitting");
+  }
+
+  if (/wetland|habitat|species|protected|preserve|ecological/.test(haystack)) {
+    impacts.add("Buildability");
+    impacts.add("Permitting");
+    impacts.add("Schedule");
+  }
+
+  if (/flood|seismic|earthquake|hazard|climate|storm|wildfire/.test(haystack)) {
+    impacts.add("Cost");
+    impacts.add("Buildability");
+    impacts.add("Operations");
+  }
+
+  if (/zoning|variance|permit|approval|entitlement|hearing/.test(haystack)) {
+    impacts.add("Schedule");
+    impacts.add("Permitting");
+  }
+
+  if (/utility|power|energy|water|wastewater|infrastructure|fiber/.test(haystack)) {
+    impacts.add("Cost");
+    impacts.add("Operations");
+    impacts.add("Schedule");
+  }
+
+  if (/noise|air|traffic|community|stakeholder|opposition/.test(haystack)) {
+    impacts.add("Schedule");
+    impacts.add("Permitting");
+  }
+
+  if (/financial|tax|cost|budget|financing|insurance/.test(haystack)) {
+    impacts.add("Cost");
+  }
+
+  if (impacts.size === 0) {
+    impacts.add("Cost");
+    impacts.add("Schedule");
+  }
+
+  return Array.from(impacts).sort();
 }
 
 function getSeverity(risk) {
@@ -924,6 +1117,10 @@ function getSummaryRisks(site) {
 function renderFullRiskMarkup(risk) {
   const note = getRiskNote(risk.id);
   const noteEditorOpen = state.activeNoteRiskId === risk.id;
+  const impactTags = (risk.impactAreas || [])
+    .map((area) => `<span class="impact-tag">${area}</span>`)
+    .join("");
+
   return `
     <article class="full-risk-row" id="risk-${risk.id}" data-risk-id="${risk.id}">
       <div class="full-risk-top">
@@ -940,6 +1137,11 @@ function renderFullRiskMarkup(risk) {
           >
             ${renderNoteIcon()}
           </button>
+          <button class="technical-details-toggle" type="button" data-technical-risk="${risk.id}" aria-label="Show technical details" title="Technical finding">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8v8M8 12h8"></path>
+            </svg>
+          </button>
           ${noteEditorOpen ? renderNotePopover(risk.id) : ""}
         </div>
       </div>
@@ -952,7 +1154,9 @@ function renderFullRiskMarkup(risk) {
           <span class="certainty-badge">${risk.certainty}%</span>
         </div>
       </div>
-      <h5>${risk.title}</h5>
+      <h5 class="risk-statement">${risk.statement}</h5>
+      ${risk.title !== risk.statement ? `<div class="technical-details-content" data-technical-risk="${risk.id}" style="display: none;"><p class="technical-finding"><strong>Technical Finding:</strong> ${risk.title}</p></div>` : ""}
+      ${impactTags ? `<div class="impact-tags">${impactTags}</div>` : ""}
       <p class="full-risk-text">${risk.summary}</p>
       <a class="text-link" href="${risk.sources[0]?.url || "#"}" target="_blank" rel="noreferrer noopener">Sources (${risk.sources.length})</a>
     </article>
@@ -1022,6 +1226,17 @@ function wireRiskInteractions(container) {
       const riskId = button.dataset.noteRisk;
       state.activeNoteRiskId = state.activeNoteRiskId === riskId ? null : riskId;
       render();
+    });
+  });
+
+  [...container.querySelectorAll("[data-technical-risk]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const riskId = button.dataset.technicalRisk;
+      const detailsContent = container.querySelector(`[data-technical-risk="${CSS.escape(riskId)}"][style]`);
+      if (detailsContent) {
+        const isHidden = detailsContent.style.display === "none";
+        detailsContent.style.display = isHidden ? "block" : "none";
+      }
     });
   });
 

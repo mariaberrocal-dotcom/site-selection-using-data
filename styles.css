@@ -1353,6 +1353,167 @@ button {
   stroke-linejoin: round;
 }
 
+.risk-statement {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.technical-details-toggle {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.technical-details-toggle:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.technical-details-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.technical-details-content {
+  margin: 12px 0 8px;
+  padding: 12px;
+  border-left: 3px solid var(--blue-soft);
+  background: var(--blue-soft);
+  border-radius: 8px;
+}
+
+.technical-finding {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.technical-finding strong {
+  color: var(--text-strong);
+}
+
+.impact-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+
+.impact-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f0eaff;
+  color: #765cff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.category-summary {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--surface-soft);
+  border-radius: 18px;
+  border: 1px solid var(--line);
+}
+
+.category-summary-head {
+  margin-bottom: 18px;
+}
+
+.category-summary-head h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: var(--text-strong);
+}
+
+.category-summary-text {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.category-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.summary-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.summary-card-label {
+  display: block;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+.category-summary-risks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.category-summary-risk {
+  margin-bottom: 8px;
+}
+
+.category-summary-risk:last-child {
+  margin-bottom: 0;
+}
+
+.risk-title-summary {
+  display: block;
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.impact-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.impact-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.impact-area-label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
 @media (max-width: 1200px) {
   .risk-grid,
   .map-layout,
@@ -1364,6 +1525,10 @@ button {
 
   .full-eval-shell {
     grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .category-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1411,5 +1576,9 @@ button {
 
   .search-field {
     width: 100%;
+  }
+
+  .category-summary-grid {
+    grid-template-columns: 1fr;
   }
 }
