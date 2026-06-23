@@ -158,8 +158,10 @@ function renderSummary(site) {
               noteButton.setAttribute("data-note-content", note);
             }
 
+            const moreBtn = fragment.querySelector(".more-button");
             const editBtn = fragment.querySelector("[data-edit-risk]");
             const deleteBtn = fragment.querySelector("[data-delete-risk]");
+            if (moreBtn) moreBtn.dataset.moreMenu = risk.id;
             if (editBtn) editBtn.dataset.editRisk = risk.id;
             if (deleteBtn) deleteBtn.dataset.deleteRisk = risk.id;
 
