@@ -16,6 +16,7 @@ The core idea is that leaders should be able to start with a fast summary, then 
 - Executive first: the first screen should feel like a decision-support readout, not a raw data dump.
 - Connected detail: anything surfaced in the summary should trace back to the full evaluation.
 - Same interaction language across views: flags, notes, severity, certainty, and view toggles should behave consistently in summary and full evaluation.
+- Separate personal workflow from site-level workflow: saving something for later should not imply that it belongs in the executive risk register.
 - Visual scanning matters: category chips, badges, icons, and color cues should help users differentiate risk types quickly.
 - Compact but readable: cards should stay visually aligned, with truncation and layout rules that keep the interface tidy.
 - Sticky navigation for long reports: users should always know where they are inside the full evaluation.
@@ -26,6 +27,7 @@ The core idea is that leaders should be able to start with a fast summary, then 
 - Keep the Builder branch state as the source of truth for the UI.
 - Preserve parity between summary risk cards and full-evaluation risk cards.
 - Make flagged risks feel intentional: flagging should clearly communicate that a risk is being surfaced into the Summary Evaluation.
+- Keep bookmarks clearly secondary to promotion so users understand they are saving risks for personal follow-up, not promoting them into the site-level summary.
 - Improve navigation confidence inside Full Evaluation, especially sticky category and section navigation.
 - Keep the visual system consistent: Inter font, 14px CTA scale, tighter badge heights, 40px header controls, 10px shell radius, and the current Civarea branding treatment.
 - Ensure the app remains runnable as a simple static frontend served locally.
@@ -64,11 +66,14 @@ The current design direction treats the summary cards as risks that have effecti
 
 The summary should feel curated, not exhaustive.
 
+Promotion into the Risk Register is a site-level statement. Bookmarking is a personal analyst workflow and should not change what appears in the Summary Evaluation.
+
 ## Known Unresolved Questions
 
 - What is the final source-of-truth rule between automatically imported risks and user-flagged risks in the Summary Evaluation?
 - Should summary cards always represent only flagged risks, or should some system-prioritized risks remain there by default?
 - How should notes persist long term: local session state only, browser storage, backend storage, or exportable metadata?
+- How should bookmarks persist long term: local session state only, browser storage, backend storage, or exportable metadata?
 - What should the `Site Files` button do in the final product?
 - What is the desired behavior for `Add Risk` in the summary workflow?
 - Should the full-evaluation section spy be based on click intent, viewport midpoint, or sticky-threshold logic?
@@ -76,4 +81,3 @@ The summary should feel curated, not exhaustive.
 - Should the app eventually support editing, deleting, and reordering surfaced summary risks explicitly?
 - How should exports reflect user state such as flags and notes?
 - Is `main` intended to stay behind Builder work, or should Builder branches be merged back into `main` on a regular cadence?
-

@@ -1105,6 +1105,7 @@ button {
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+  position: relative;
 }
 
 .flag-button.is-active {
@@ -1120,6 +1121,127 @@ button {
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.flag-button[data-promote-label]::after {
+  content: attr(data-promote-label);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  color: #2f3640;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #e3e8f2;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 60ms ease, visibility 60ms ease;
+  pointer-events: none;
+}
+
+.flag-button[data-promote-label]::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: #ffffff;
+  border-right: 1px solid #e3e8f2;
+  border-bottom: 1px solid #e3e8f2;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 60ms ease, visibility 60ms ease;
+  pointer-events: none;
+}
+
+.flag-button[data-promote-label]:hover::after,
+.flag-button[data-promote-label]:hover::before {
+  visibility: visible;
+  opacity: 1;
+}
+
+.bookmark-button {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #c2c6d0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.bookmark-button.is-active {
+  background: #eef2f7;
+  color: #5f6b7a;
+}
+
+.bookmark-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bookmark-button[data-bookmark-label]::after {
+  content: attr(data-bookmark-label);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  color: #2f3640;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #e3e8f2;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 60ms ease, visibility 60ms ease;
+  pointer-events: none;
+}
+
+.bookmark-button[data-bookmark-label]::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: #ffffff;
+  border-right: 1px solid #e3e8f2;
+  border-bottom: 1px solid #e3e8f2;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 60ms ease, visibility 60ms ease;
+  pointer-events: none;
+}
+
+.bookmark-button[data-bookmark-label]:hover::after,
+.bookmark-button[data-bookmark-label]:hover::before {
+  visibility: visible;
+  opacity: 1;
 }
 
 .note-button {
@@ -1235,6 +1357,12 @@ button {
 .note-button[data-note-content]:hover::after {
   visibility: visible;
   opacity: 1;
+}
+
+.note-button,
+.note-button-wrapper,
+.note-popover {
+  display: none !important;
 }
 
 .risk-more-menu {

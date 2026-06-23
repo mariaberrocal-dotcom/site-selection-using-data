@@ -6,7 +6,8 @@ const state = {
   selectedDomainKey: null,
   focusDomain: null,
   focusRisk: null,
-  flaggedRiskIds: [],
+  promotedRiskIds: [],
+  bookmarkedRiskIds: [],
   summaryRiskView: "grid",
   fullRiskView: "grid",
   riskNotes: {},
@@ -50,6 +51,9 @@ async function boot() {
     sites.find((site) => site.id === siteId || slugify(site.name) === siteId) ||
     sites.find((site) => site.name === "Dema - Helis") ||
     sites[0];
+
+  const normalizedSite = normalizeSite(state.site);
+  state.promotedRiskIds = selectDefaultPromotedRiskIds(normalizedSite, 15);
 
   bindEvents();
   render();
@@ -132,6 +136,7 @@ function renderSummary(site) {
             const source = fragment.querySelector(".source-link");
             const evidence = fragment.querySelector(".evidence-link");
             const flagButton = fragment.querySelector("[data-flag-risk]");
+            const bookmarkButton = fragment.querySelector("[data-bookmark-risk]");
             const noteButton = fragment.querySelector("[data-note-risk]");
 
             category.outerHTML = renderSummaryCategoryChip(risk);
@@ -148,7 +153,14 @@ function renderSummary(site) {
             }
             flagButton.dataset.flagRisk = risk.id;
             flagButton.innerHTML = renderFlagIcon();
-            flagButton.classList.toggle("is-active", isFlaggedRisk(risk.id));
+            flagButton.classList.toggle("is-active", isPromotedRisk(risk.id));
+            flagButton.setAttribute("aria-label", getPromoteActionLabel(risk.id));
+            flagButton.setAttribute("data-promote-label", getPromoteActionLabel(risk.id));
+            bookmarkButton.dataset.bookmarkRisk = risk.id;
+            bookmarkButton.innerHTML = renderBookmarkIcon();
+            bookmarkButton.classList.toggle("is-active", isBookmarkedRisk(risk.id));
+            bookmarkButton.setAttribute("aria-label", getBookmarkActionLabel(risk.id));
+            bookmarkButton.setAttribute("data-bookmark-label", getBookmarkActionLabel(risk.id));
             const note = getRiskNote(risk.id);
             noteButton.dataset.noteRisk = risk.id;
             noteButton.innerHTML = renderNoteIcon();
@@ -1335,16 +1347,59 @@ function dedupeSources(sources) {
 }
 
 function getSummaryRisks(site) {
-  const flagged = site.allDomainRisks.filter((risk) => isFlaggedRisk(risk.id));
-  const merged = [...flagged, ...site.risks];
-  const seen = new Set();
-  return merged
-    .filter((risk) => {
-      if (seen.has(risk.id)) return false;
-      seen.add(risk.id);
-      return true;
-    })
-    .sort((a, b) => Number(isFlaggedRisk(b.id)) - Number(isFlaggedRisk(a.id)));
+  return sortFullRisks(
+    site.allDomainRisks.filter((risk) => isPromotedRisk(risk.id))
+  );
+}
+
+function selectDefaultPromotedRiskIds(site, targetCount = 15) {
+  const highRisks = site.allDomainRisks.filter((risk) => risk.severity === "High");
+  const grouped = new Map();
+
+  highRisks.forEach((risk) => {
+    const key = risk.domainKey || "other";
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+    }
+    grouped.get(key).push(risk);
+  });
+
+  [...grouped.values()].forEach((bucket) => shuffleInPlace(bucket));
+
+  const categoryKeys = shuffleArray([...grouped.keys()]);
+  const selected = [];
+  const selectedIds = new Set();
+  let addedInRound = true;
+
+  while (selected.length < targetCount && addedInRound) {
+    addedInRound = false;
+    categoryKeys.forEach((key) => {
+      if (selected.length >= targetCount) {
+        return;
+      }
+      const bucket = grouped.get(key) || [];
+      const next = bucket.find((risk) => !selectedIds.has(risk.id));
+      if (next) {
+        selected.push(next.id);
+        selectedIds.add(next.id);
+        addedInRound = true;
+      }
+    });
+  }
+
+  if (selected.length < targetCount) {
+    const remaining = shuffleArray(
+      site.allDomainRisks.filter((risk) => !selectedIds.has(risk.id))
+    );
+    remaining.forEach((risk) => {
+      if (selected.length < targetCount) {
+        selected.push(risk.id);
+        selectedIds.add(risk.id);
+      }
+    });
+  }
+
+  return selected;
 }
 
 function renderFullRiskMarkup(risk) {
@@ -1371,8 +1426,23 @@ function renderFullRiskMarkup(risk) {
     <article class="full-risk-row" id="risk-${risk.id}" data-risk-id="${risk.id}">
       <div class="full-risk-top">
         <div class="full-risk-actions">
-          <button class="flag-button ${isFlaggedRisk(risk.id) ? "is-active" : ""}" type="button" data-flag-risk="${risk.id}" aria-label="Flag risk">
+          <button
+            class="flag-button ${isPromotedRisk(risk.id) ? "is-active" : ""}"
+            type="button"
+            data-flag-risk="${risk.id}"
+            aria-label="${getPromoteActionLabel(risk.id)}"
+            data-promote-label="${getPromoteActionLabel(risk.id)}"
+          >
             ${renderFlagIcon()}
+          </button>
+          <button
+            class="bookmark-button ${isBookmarkedRisk(risk.id) ? "is-active" : ""}"
+            type="button"
+            data-bookmark-risk="${risk.id}"
+            aria-label="${getBookmarkActionLabel(risk.id)}"
+            data-bookmark-label="${getBookmarkActionLabel(risk.id)}"
+          >
+            ${renderBookmarkIcon()}
           </button>
           <div class="note-button-wrapper">
             <button
@@ -1419,23 +1489,52 @@ function renderFullRiskMarkup(risk) {
   `;
 }
 
-function isFlaggedRisk(riskId) {
-  return state.flaggedRiskIds.includes(riskId);
+function isPromotedRisk(riskId) {
+  return state.promotedRiskIds.includes(riskId);
 }
 
-function toggleFlagRisk(riskId) {
-  state.flaggedRiskIds = isFlaggedRisk(riskId)
-    ? state.flaggedRiskIds.filter((id) => id !== riskId)
-    : [...state.flaggedRiskIds, riskId];
+function togglePromotedRisk(riskId) {
+  state.promotedRiskIds = isPromotedRisk(riskId)
+    ? state.promotedRiskIds.filter((id) => id !== riskId)
+    : [...state.promotedRiskIds, riskId];
 }
 
 function renderFlagIcon() {
   return `
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 3v18"></path>
-      <path d="M6 4h9l-1.8 3 1.8 3H6"></path>
+      <path d="M15 4.5a3.5 3.5 0 0 0-6 2.47c0 .72.22 1.42.64 2.01L12 12l2.36-3.02c.41-.59.64-1.29.64-2.01A3.5 3.5 0 0 0 15 4.5Z"></path>
+      <path d="M12 12v8"></path>
+      <path d="M9 20h6"></path>
     </svg>
   `;
+}
+
+function renderBookmarkIcon() {
+  return `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 4.5h10a1.5 1.5 0 0 1 1.5 1.5V20l-6.5-3.8L5.5 20V6A1.5 1.5 0 0 1 7 4.5Z"></path>
+    </svg>
+  `;
+}
+
+function getPromoteActionLabel(riskId) {
+  return isPromotedRisk(riskId)
+    ? "Remove from Risk Register"
+    : "Promote to Risk Register";
+}
+
+function isBookmarkedRisk(riskId) {
+  return state.bookmarkedRiskIds.includes(riskId);
+}
+
+function toggleBookmarkedRisk(riskId) {
+  state.bookmarkedRiskIds = isBookmarkedRisk(riskId)
+    ? state.bookmarkedRiskIds.filter((id) => id !== riskId)
+    : [...state.bookmarkedRiskIds, riskId];
+}
+
+function getBookmarkActionLabel(riskId) {
+  return isBookmarkedRisk(riskId) ? "Saved for later" : "Save for later";
 }
 
 function renderNoteIcon() {
@@ -1484,13 +1583,21 @@ function wireRiskInteractions(container) {
   [...container.querySelectorAll("[data-flag-risk]")].forEach((button) => {
     button.addEventListener("click", () => {
       const riskId = button.dataset.flagRisk;
-      const nextFlagged = !isFlaggedRisk(riskId);
-      toggleFlagRisk(riskId);
+      const nextPromoted = !isPromotedRisk(riskId);
+      togglePromotedRisk(riskId);
       showToast(
-        nextFlagged
-          ? "Risk added to Summary Evaluation."
-          : "Risk removed from Summary Evaluation."
+        nextPromoted
+          ? "Risk promoted to the Risk Register and added to Summary Evaluation."
+          : "Risk removed from the Risk Register and Summary Evaluation."
       );
+      render();
+    });
+  });
+
+  [...container.querySelectorAll("[data-bookmark-risk]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const riskId = button.dataset.bookmarkRisk;
+      toggleBookmarkedRisk(riskId);
       render();
     });
   });
@@ -1681,11 +1788,25 @@ function setRiskNote(riskId, value) {
 function sortFullRisks(risks) {
   return [...risks].sort(
     (a, b) =>
-      Number(isFlaggedRisk(b.id)) - Number(isFlaggedRisk(a.id)) ||
+      Number(isPromotedRisk(b.id)) - Number(isPromotedRisk(a.id)) ||
       getSeverityRank(b.severity) - getSeverityRank(a.severity) ||
       Number(b.certainty || 0) - Number(a.certainty || 0) ||
       a.title.localeCompare(b.title)
   );
+}
+
+function shuffleArray(items) {
+  const copy = [...items];
+  shuffleInPlace(copy);
+  return copy;
+}
+
+function shuffleInPlace(items) {
+  for (let i = items.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
 }
 
 function getSeverityRank(severity) {
