@@ -151,12 +151,14 @@ function renderSummary(site) {
             flagButton.classList.toggle("is-active", isFlaggedRisk(risk.id));
 
             const note = getRiskNote(risk.id);
-            const noteWrapper = document.createElement("div");
-            noteWrapper.className = "note-button-wrapper";
             noteButton.dataset.noteRisk = risk.id;
             noteButton.innerHTML = renderNoteIcon();
             noteButton.classList.toggle("has-note", Boolean(note));
             noteButton.classList.toggle("is-open", state.activeNoteRiskId === risk.id);
+
+            const noteWrapper = document.createElement("div");
+            noteWrapper.className = "note-button-wrapper";
+            noteButton.parentNode.insertBefore(noteWrapper, noteButton);
             noteWrapper.appendChild(noteButton);
             if (note) {
               const tooltipDiv = document.createElement("div");
@@ -164,7 +166,6 @@ function renderSummary(site) {
               tooltipDiv.textContent = note;
               noteWrapper.appendChild(tooltipDiv);
             }
-            noteButton.parentNode.replaceChild(noteWrapper, noteButton);
             card.dataset.domain = risk.domainKey;
             card.dataset.riskId = risk.id;
             if (state.activeNoteRiskId === risk.id) {
