@@ -210,6 +210,7 @@ button {
   align-items: flex-start;
   border-style: none;
   border-width: 1px;
+  border-bottom: none;
 }
 
 .page-header > div:first-child {
