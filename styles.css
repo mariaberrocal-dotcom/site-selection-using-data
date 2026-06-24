@@ -1465,8 +1465,8 @@ button {
 .full-risk-detailed {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 8px;
+  gap: 0px;
+  padding: 12px;
   background: #ffffff;
   border: 1px solid var(--line);
   border-radius: 12px;
