@@ -6,11 +6,19 @@ const state = {
   selectedDomainKey: null,
   focusDomain: null,
   focusRisk: null,
-  flaggedRiskIds: [],
+  promotedRiskIds: [],
+  bookmarkedRiskIds: [],
   summaryRiskView: "grid",
   fullRiskView: "list",
   riskNotes: {},
   activeNoteRiskId: null,
+  previousView: null,
+  editingSiteVerdictId: null,
+  editedSiteVerdict: {},
+  editedVerdictStatus: {}, // tracks "suggested" or "edited"
+  editingCategorySummaryId: null,
+  editedCategorySummaries: {},
+  temperatureProfileHidden: {}, // tracks hidden state by domain key
 };
 
 const elements = {
@@ -43,6 +51,9 @@ async function boot() {
     sites.find((site) => site.id === siteId || slugify(site.name) === siteId) ||
     sites.find((site) => site.name === "Dema - Helis") ||
     sites[0];
+
+  const normalizedSite = normalizeSite(state.site);
+  state.promotedRiskIds = selectDefaultPromotedRiskIds(normalizedSite, 15);
 
   bindEvents();
   render();
@@ -88,6 +99,7 @@ function render() {
   renderSummary(normalized);
   renderFull(normalized);
   renderMap(normalized);
+  renderReturnButton();
   highlightTarget();
 }
 
@@ -124,13 +136,19 @@ function renderSummary(site) {
             const source = fragment.querySelector(".source-link");
             const evidence = fragment.querySelector(".evidence-link");
             const flagButton = fragment.querySelector("[data-flag-risk]");
+            const bookmarkButton = fragment.querySelector("[data-bookmark-risk]");
             const noteButton = fragment.querySelector("[data-note-risk]");
 
             category.outerHTML = renderSummaryCategoryChip(risk);
             severity.textContent = risk.severity;
             severity.classList.add(risk.severity.toLowerCase());
             certainty.textContent = `${risk.certainty}%`;
-            title.textContent = risk.title;
+            const jurisdictionSpan = fragment.querySelector(".metric-jurisdiction");
+            if (jurisdictionSpan) {
+              jurisdictionSpan.textContent = risk.jurisdiction || "Unknown";
+            }
+            title.textContent = risk.statement || risk.title;
+            title.setAttribute("title", risk.title !== risk.statement ? `Technical: ${risk.title}` : "");
             text.textContent = risk.summary;
             source.textContent = `Sources (${risk.sources.length})`;
             source.href = risk.sources[0]?.url || "#";
@@ -139,12 +157,30 @@ function renderSummary(site) {
             }
             flagButton.dataset.flagRisk = risk.id;
             flagButton.innerHTML = renderFlagIcon();
-            flagButton.classList.toggle("is-active", isFlaggedRisk(risk.id));
+            flagButton.classList.toggle("is-active", isPromotedRisk(risk.id));
+            flagButton.setAttribute("aria-label", getPromoteActionLabel(risk.id));
+            flagButton.setAttribute("data-promote-label", getPromoteActionLabel(risk.id));
+            bookmarkButton.dataset.bookmarkRisk = risk.id;
+            bookmarkButton.innerHTML = renderBookmarkIcon();
+            bookmarkButton.classList.toggle("is-active", isBookmarkedRisk(risk.id));
+            bookmarkButton.setAttribute("aria-label", getBookmarkActionLabel(risk.id));
+            bookmarkButton.setAttribute("data-bookmark-label", getBookmarkActionLabel(risk.id));
+            const note = getRiskNote(risk.id);
             noteButton.dataset.noteRisk = risk.id;
             noteButton.innerHTML = renderNoteIcon();
-            noteButton.classList.toggle("has-note", Boolean(getRiskNote(risk.id)));
+            noteButton.classList.toggle("has-note", Boolean(note));
             noteButton.classList.toggle("is-open", state.activeNoteRiskId === risk.id);
-            noteButton.setAttribute("title", getRiskNote(risk.id) || "Add note");
+            if (note) {
+              noteButton.setAttribute("data-note-content", note);
+            }
+
+            const moreBtn = fragment.querySelector(".more-button");
+            const editBtn = fragment.querySelector("[data-edit-risk]");
+            const deleteBtn = fragment.querySelector("[data-delete-risk]");
+            if (moreBtn) moreBtn.dataset.moreMenu = risk.id;
+            if (editBtn) editBtn.dataset.editRisk = risk.id;
+            if (deleteBtn) deleteBtn.dataset.deleteRisk = risk.id;
+
             card.dataset.domain = risk.domainKey;
             card.dataset.riskId = risk.id;
             if (state.activeNoteRiskId === risk.id) {
@@ -174,11 +210,42 @@ function renderSummary(site) {
               <span class="stat-value">${site.locationLabel}</span>
             </div>
           </div>
-          <div class="verdict-row">
-            <span class="stat-label">Evaluation Verdict</span>
-            <span class="verdict-chip">Suggested by AI</span>
+          <div class="verdict-section">
+            <div class="verdict-row">
+              <span class="stat-label">Evaluation Verdict</span>
+              <button class="verdict-chip-button" type="button" data-edit-verdict aria-label="Edit verdict">
+                <span class="verdict-chip">
+                  ${state.editedVerdictStatus[site.id] === "edited" ? "Edited by User" : "Suggested by AI"}
+                </span>
+                <span class="verdict-edit-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M3 17.25V21h3.75L17.81 9.94m-4.88-4.88L19.93 2.05a2.121 2.121 0 013 3L15.93 12.07m-4.88-4.88l1.41-1.41a2.121 2.121 0 013 0l4.88 4.88a2.121 2.121 0 010 3l-1.41 1.41m-2.12-2.12L9.05 9.05"/>
+                  </svg>
+                </span>
+              </button>
+              ${
+                state.editedVerdictStatus[site.id] === "edited"
+                  ? `<button class="revert-verdict-button" type="button" data-revert-verdict="${site.id}" aria-label="Revert to suggested version">Revert</button>`
+                  : ""
+              }
+            </div>
+            ${
+              state.editingSiteVerdictId === site.id
+                ? `
+              <div class="verdict-editor" data-verdict-editor="${site.id}">
+                <textarea class="verdict-textarea" rows="4" placeholder="Enter site evaluation verdict...">${escapeHtml(
+                  state.editedSiteVerdict[site.id] ||
+                    generateSiteExecutiveSummary(site)
+                )}</textarea>
+                <div class="editor-actions">
+                  <button class="editor-cancel" type="button" data-verdict-cancel="${site.id}">Cancel</button>
+                  <button class="editor-save" type="button" data-verdict-save="${site.id}">Save</button>
+                </div>
+              </div>
+            `
+                : `<p class="verdict-body">${state.editedSiteVerdict[site.id] || generateSiteExecutiveSummary(site)}</p>`
+            }
           </div>
-          <p class="verdict-body">${site.verdict}</p>
         </div>
       </section>
 
@@ -213,6 +280,7 @@ function renderSummary(site) {
 
   wireSummaryRiskCards(risks);
   wireRiskInteractions(elements.summaryPanel);
+  wireVerdictEditor(site);
 
   [...elements.summaryPanel.querySelectorAll("[data-summary-risk-view]")].forEach(
     (button) => {
@@ -233,6 +301,11 @@ function wireSummaryRiskCards(risks) {
       return;
     }
     button.addEventListener("click", () => {
+      state.previousView = {
+        tab: state.tab,
+        scrollPosition: elements.summaryPanel.scrollTop,
+        summaryRiskView: state.summaryRiskView,
+      };
       state.tab = "full";
       state.selectedDomainKey = risk.domainKey;
       state.focusDomain = risk.domainKey;
@@ -240,6 +313,279 @@ function wireSummaryRiskCards(risks) {
       render();
     });
   });
+}
+
+function generateExecutiveAssessment(risks) {
+  if (!risks || risks.length === 0) {
+    return "Development is feasible with standard due diligence and planning.";
+  }
+
+  const risksByTheme = {
+    environmental: [],
+    permitting: [],
+    utilities: [],
+    constraints: [],
+    other: [],
+  };
+
+  risks.forEach((risk) => {
+    const text = [risk.title, risk.statement, risk.summary]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (/contamination|environmental|remediation|asbestos|lead|mold|hazard/i.test(text)) {
+      risksByTheme.environmental.push(risk);
+    } else if (/permit|zoning|approval|hearing|variance|entitlement/i.test(text)) {
+      risksByTheme.permitting.push(risk);
+    } else if (/utility|power|water|fiber|connectivity|infrastructure/i.test(text)) {
+      risksByTheme.utilities.push(risk);
+    } else if (/flood|seismic|climate|hazard|wildfire|access|wetland|habitat/i.test(text)) {
+      risksByTheme.constraints.push(risk);
+    } else {
+      risksByTheme.other.push(risk);
+    }
+  });
+
+  const assessmentParts = [];
+
+  if (risksByTheme.environmental.length > 0) {
+    assessmentParts.push(
+      "Environmental considerations may require additional site investigation and regulatory coordination."
+    );
+  }
+
+  if (risksByTheme.permitting.length > 0) {
+    assessmentParts.push(
+      "Project approvals and permits will need to address regulatory requirements before development can proceed."
+    );
+  }
+
+  if (risksByTheme.utilities.length > 0) {
+    assessmentParts.push(
+      "Infrastructure connections and capacity will need to be confirmed with relevant service providers."
+    );
+  }
+
+  if (risksByTheme.constraints.length > 0) {
+    assessmentParts.push(
+      "Site conditions and physical characteristics will need to be assessed and addressed during site planning."
+    );
+  }
+
+  if (assessmentParts.length === 0) {
+    return "Development is feasible with standard due diligence and planning.";
+  }
+
+  const assessment = assessmentParts.join(" ");
+  return (
+    "Development remains feasible but requires attention to key considerations: " +
+    assessment.charAt(0).toLowerCase() +
+    assessment.slice(1)
+  );
+}
+
+function renderTemperatureProfile(profile, domainKey) {
+  if (!profile) {
+    return "";
+  }
+
+  const isHidden = state.temperatureProfileHidden[domainKey];
+
+  const monthlyTableRows = profile.monthlyData
+    .map(
+      (month) => `
+        <tr>
+          <td class="month-label">${month.month}</td>
+          <td class="temp-value">${month.high.f}°<span class="temp-unit">F</span></td>
+          <td class="temp-value">${month.low.f}°<span class="temp-unit">F</span></td>
+        </tr>
+      `
+    )
+    .join("");
+
+  return `
+    <section class="temperature-profile">
+      <div class="temperature-profile-header">
+        <h4>Temperature Profile</h4>
+        <button class="toggle-temp-profile" type="button" data-toggle-temp-profile="${domainKey}" aria-label="Toggle temperature profile">
+          ${isHidden ? "Show" : "Hide"}
+        </button>
+      </div>
+      ${
+        !isHidden
+          ? `
+      <p class="temp-source">Historical data from Open-Meteo (ERSA)</p>
+
+      <div class="temperature-stats">
+        <div class="temp-stat-item">
+          <span class="stat-label">Annual Average</span>
+          <span class="stat-value">${profile.annualAverage.f}°F / ${profile.annualAverage.c}°C</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Record High (${profile.recordHigh.year})</span>
+          <span class="stat-value">${profile.recordHigh.value.f}°F / ${profile.recordHigh.value.c}°C</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Record Low (${profile.recordLow.year})</span>
+          <span class="stat-value">${profile.recordLow.value.f}°F / ${profile.recordLow.value.c}°C</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Extreme Heat Days (+${profile.extremeHeatDays.f}°F / ${profile.extremeHeatDays.c}°C)</span>
+          <span class="stat-value">38.1</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Extreme Cold Days (${profile.extremeColdDays.f}°F / ${profile.extremeColdDays.c}°C)</span>
+          <span class="stat-value">20.2</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Cooling Degree Days (base 65°F)</span>
+          <span class="stat-value">${profile.coolingDegreeDays.toLocaleString()}</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Heating Degree Days (base 65°F)</span>
+          <span class="stat-value">${profile.heatingDegreeDays.toLocaleString()}</span>
+        </div>
+
+        <div class="temp-stat-item">
+          <span class="stat-label">Peak Apparent Temp (10-yr max)</span>
+          <span class="stat-value">${profile.peakApparentTemp.f}°F / ${profile.peakApparentTemp.c}°C</span>
+        </div>
+      </div>
+
+      <div class="monthly-temperatures">
+        <h5>Monthly Average High / Low (10-year)</h5>
+        <table class="temperature-table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>High</th>
+              <th>Low</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${monthlyTableRows}
+          </tbody>
+        </table>
+      </div>
+    `
+          : ""
+      }
+    </section>
+  `;
+}
+
+function renderCategorySummary(domain, risks) {
+  if (!risks || risks.length === 0) {
+    return "";
+  }
+
+  const executiveAssessment = generateExecutiveAssessment(risks);
+
+  return `
+    <section class="category-summary">
+      <h3 class="category-summary-title">${domain.navLabel}</h3>
+
+      <div class="category-summary-body">
+        <div class="executive-assessment">
+          <p>${executiveAssessment}</p>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function getTemperatureProfile(domain) {
+  if (!domain || domain.key !== "climate") {
+    return null;
+  }
+
+  return {
+    annualAverage: { f: 66.7, c: 19.3 },
+    recordHigh: { value: { f: 109.4, c: 43 }, year: 1980 },
+    recordLow: { value: { f: -3.8, c: -19.9 }, year: 2021 },
+    extremeHeatDays: { f: 80, c: 38 },
+    extremeColdDays: { f: 0, c: -32 },
+    coolingDegreeDays: 1402,
+    heatingDegreeDays: 1082,
+    peakApparentTemp: { f: 113.2, c: 45.1 },
+    monthlyData: [
+      { month: "Jan", high: { f: 53.3, c: 11.8 }, low: { f: 36.5, c: 2.5 } },
+      { month: "Feb", high: { f: 60.8, c: 16 }, low: { f: 43.3, c: 6.3 } },
+      { month: "Mar", high: { f: 71.1, c: 21.7 }, low: { f: 50.3, c: 10.2 } },
+      { month: "Apr", high: { f: 76.7, c: 24.8 }, low: { f: 55.8, c: 13.2 } },
+      { month: "May", high: { f: 82.6, c: 28.1 }, low: { f: 64.2, c: 17.9 } },
+      { month: "Jun", high: { f: 90.7, c: 32.6 }, low: { f: 72.5, c: 22.5 } },
+      { month: "Jul", high: { f: 94.6, c: 34.8 }, low: { f: 76.4, c: 24.7 } },
+      { month: "Aug", high: { f: 94.1, c: 34.5 }, low: { f: 76.2, c: 24.6 } },
+      { month: "Sep", high: { f: 87.8, c: 31 }, low: { f: 70, c: 21.1 } },
+      { month: "Oct", high: { f: 78.6, c: 25.9 }, low: { f: 58.1, c: 14.5 } },
+      { month: "Nov", high: { f: 66.7, c: 19.3 }, low: { f: 48.4, c: 9.1 } },
+      { month: "Dec", high: { f: 56, c: 13.3 }, low: { f: 42.1, c: 5.6 } },
+    ],
+  };
+}
+
+function generateSiteExecutiveSummary(site) {
+  if (!site || !site.domains || site.domains.length === 0) {
+    return "The site requires comprehensive due diligence across all categories before development can proceed.";
+  }
+
+  const categoryAssessments = [];
+  const themesFound = new Set();
+
+  site.domains.forEach((domain) => {
+    if (domain.risks && domain.risks.length > 0) {
+      const risksByType = {
+        environmental: domain.risks.filter((r) =>
+          /contamination|environmental|remediation|asbestos|lead|mold/i.test([r.title, r.statement].join(" "))
+        ),
+        regulatory: domain.risks.filter((r) =>
+          /permit|zoning|approval|regulatory|entitlement/i.test([r.title, r.statement].join(" "))
+        ),
+        infrastructure: domain.risks.filter((r) =>
+          /utility|power|water|fiber|infrastructure|connection/i.test([r.title, r.statement].join(" "))
+        ),
+        physical: domain.risks.filter((r) =>
+          /site|physical|access|constraint|condition|hazard|flood|seismic/i.test([r.title, r.statement].join(" "))
+        ),
+      };
+
+      if (risksByType.environmental.length > 0 && !themesFound.has("environmental")) {
+        categoryAssessments.push("Environmental assessments and coordination will be required.");
+        themesFound.add("environmental");
+      }
+      if (risksByType.regulatory.length > 0 && !themesFound.has("regulatory")) {
+        categoryAssessments.push("Regulatory approvals and permits need to be secured.");
+        themesFound.add("regulatory");
+      }
+      if (risksByType.infrastructure.length > 0 && !themesFound.has("infrastructure")) {
+        categoryAssessments.push("Infrastructure capacity and connections require confirmation.");
+        themesFound.add("infrastructure");
+      }
+      if (risksByType.physical.length > 0 && !themesFound.has("physical")) {
+        categoryAssessments.push("Site conditions need to be assessed and mitigated.");
+        themesFound.has("physical");
+      }
+    }
+  });
+
+  if (categoryAssessments.length === 0) {
+    return "The site is feasible for development with standard due diligence.";
+  }
+
+  const assessmentText = categoryAssessments.slice(0, 3).join(" ");
+  return (
+    "Development is feasible but will require attention to multiple considerations: " +
+    assessmentText.charAt(0).toLowerCase() +
+    assessmentText.slice(1)
+  );
 }
 
 function renderFull(site) {
@@ -277,16 +623,13 @@ function renderFull(site) {
       )
     : [];
 
+  const categorySummary = selectedDomain ? renderCategorySummary(selectedDomain, visibleRisks) : "";
+
   const bodyMarkup = selectedDomain
     ? `
       <section class="full-category-pane" id="domain-${selectedDomain.key}" data-domain="${selectedDomain.key}">
-        <div class="full-category-head">
-          <div>
-            <h3>${selectedDomain.navLabel}</h3>
-            <p class="domain-summary">${selectedDomain.summary}</p>
-          </div>
-        </div>
-
+        ${categorySummary}
+        ${selectedDomain.temperatureProfile ? renderTemperatureProfile(selectedDomain.temperatureProfile, selectedDomain.key) : ""}
         <nav class="section-quicknav" aria-label="Category sections">
           <a href="#section-risks" class="section-quicknav-item">Identified Risks (${selectedDomain.risks.length})</a>
           <a href="#section-findings" class="section-quicknav-item">Key Findings (${selectedDomain.keyFindings.length})</a>
@@ -388,7 +731,18 @@ function renderFull(site) {
       <div class="full-eval-shell">
         <aside class="full-sidenav">
           <div class="full-sidenav-head">
-            <span>Categories</span>
+            <div class="sidenav-head-group">
+              <span>Categories</span>
+              <button class="sidenav-bookmarks-button" type="button" aria-label="View bookmarks" data-bookmarks-trigger>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 4.5h10a1.5 1.5 0 0 1 1.5 1.5V20l-6.5-3.8L5.5 20V6A1.5 1.5 0 0 1 7 4.5Z"></path>
+                </svg>
+                <span class="sidenav-bookmarks-badge">${state.bookmarkedRiskIds.length}</span>
+              </button>
+            </div>
+            <div class="sidenav-bookmarks-popover" role="dialog" aria-label="Bookmarked risks" data-bookmarks-popover>
+              ${renderBookmarksPopover(site)}
+            </div>
           </div>
           <div class="full-sidenav-list">${navMarkup}</div>
         </aside>
@@ -413,7 +767,149 @@ function renderFull(site) {
     });
   });
   wireRiskInteractions(elements.fullPanel);
+  wireTemperatureProfileToggle(elements.fullPanel);
   wireFullSectionSpy();
+  wireBookmarksPopover(site);
+  wireRiskDetailsToggle(elements.fullPanel);
+  wireSeverityChange(elements.fullPanel);
+}
+
+function wireRiskDetailsToggle(container) {
+  [...container.querySelectorAll("[data-toggle-technical]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const riskId = button.dataset.toggleTechnical;
+      const details = container.querySelector(`[data-technical-details="${riskId}"]`);
+      if (details) {
+        const isOpen = details.style.display !== "none";
+        details.style.display = isOpen ? "none" : "block";
+        const textNode = button.childNodes[0];
+        if (textNode) {
+          textNode.textContent = isOpen ? "Show technical details" : "Hide technical details";
+        }
+      }
+    });
+  });
+}
+
+function wireSeverityChange(container) {
+  [...container.querySelectorAll("[data-change-severity]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const riskId = button.dataset.changeSeverity;
+      const risk = state.site?.allDomainRisks?.find((r) => r.id === riskId);
+      if (risk) {
+        showSeverityChangeModal(risk);
+      }
+    });
+  });
+}
+
+function showSeverityChangeModal(risk) {
+  const modal = document.createElement("div");
+  modal.className = "severity-modal-overlay";
+  modal.innerHTML = `
+    <div class="severity-modal">
+      <div class="severity-modal-header">
+        <span class="severity-badge ${risk.severity.toLowerCase()}">${risk.severity}</span>
+      </div>
+      <div class="severity-modal-body">
+        <div class="form-group">
+          <label for="severity-select">Severity</label>
+          <select id="severity-select" class="form-select">
+            <option value="High" ${risk.severity === "High" ? "selected" : ""}>High</option>
+            <option value="Medium" ${risk.severity === "Medium" ? "selected" : ""}>Medium</option>
+            <option value="Low" ${risk.severity === "Low" ? "selected" : ""}>Low</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="severity-reason">Reason (optional)</label>
+          <input type="text" id="severity-reason" class="form-input" placeholder="Why are you changing this?">
+        </div>
+      </div>
+      <div class="severity-modal-footer">
+        <button type="button" class="secondary-button severity-modal-cancel">Cancel</button>
+        <button type="button" class="primary-button severity-modal-save">Save</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const select = modal.querySelector("#severity-select");
+  const input = modal.querySelector("#severity-reason");
+  const cancelBtn = modal.querySelector(".severity-modal-cancel");
+  const saveBtn = modal.querySelector(".severity-modal-save");
+
+  cancelBtn.addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  saveBtn.addEventListener("click", () => {
+    const newSeverity = select.value;
+    const reason = input.value;
+    risk.severity = newSeverity;
+    if (reason) {
+      risk.severityChangeReason = reason;
+    }
+    modal.remove();
+    render();
+    showToast(`Risk severity changed to ${newSeverity}`);
+  });
+}
+
+function wireBookmarksPopover(site) {
+  const trigger = elements.fullPanel?.querySelector("[data-bookmarks-trigger]");
+  const popover = elements.fullPanel?.querySelector("[data-bookmarks-popover]");
+
+  if (!trigger || !popover) return;
+
+  trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    popover.classList.toggle("is-open");
+  });
+
+  document.addEventListener("click", (e) => {
+    if (popover.classList.contains("is-open") && !popover.parentElement.contains(e.target)) {
+      popover.classList.remove("is-open");
+    }
+  });
+
+  [...popover.querySelectorAll("[data-bookmark-item]")].forEach((item) => {
+    item.addEventListener("click", (e) => {
+      if (e.target.closest("[data-remove-bookmark]")) {
+        return;
+      }
+      const riskId = item.dataset.bookmarkItem;
+      const risk = site.allDomainRisks.find((r) => r.id === riskId);
+      if (risk) {
+        popover.classList.remove("is-open");
+        state.tab = "full";
+        state.selectedDomainKey = risk.domainKey;
+        state.focusDomain = risk.domainKey;
+        state.focusRisk = riskId;
+        render();
+        setTimeout(() => {
+          const riskElement = elements.fullPanel?.querySelector(`[data-risk-id="${riskId}"]`);
+          if (riskElement) {
+            riskElement.scrollIntoView({ behavior: "smooth", block: "center" });
+            riskElement.classList.add("highlight-pulse");
+            setTimeout(() => {
+              riskElement.classList.remove("highlight-pulse");
+            }, 2000);
+          }
+        }, 100);
+      }
+    });
+  });
+
+  [...popover.querySelectorAll("[data-remove-bookmark]")].forEach((button) => {
+    button.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const riskId = button.dataset.removeBookmark;
+      toggleBookmarkedRisk(riskId);
+      render();
+    });
+  });
 }
 
 function renderMap(site) {
@@ -478,7 +974,7 @@ function normalizeSite(site) {
       item.status.toLowerCase().includes("complete")
     ).length;
 
-    return {
+    const normalizedDomain = {
       key,
       label: domain.domainTitle || key,
       title: titleCase(domain.domainTitle || key),
@@ -500,6 +996,7 @@ function normalizeSite(site) {
       ),
       sources: dedupeSources(domain.sources || []),
       risks: (domain.risks || []).map((risk) => normalizeRisk(risk, key)),
+      temperatureProfile: getTemperatureProfile({ key }),
       searchText: [
         key,
         domain.domainTitle,
@@ -511,6 +1008,8 @@ function normalizeSite(site) {
         .join(" ")
         .toLowerCase(),
     };
+
+    return normalizedDomain;
   });
   const domainOrder = [
     "land",
@@ -596,9 +1095,14 @@ function normalizeRisk(risk, domainKey) {
     Number(risk.confidence) ||
     67;
 
+  const title = risk.title || "Untitled risk";
+  const statement = getRiskStatement(risk, title, category);
+  const impactAreas = getImpactAreas(risk, title, category);
+
   return {
     id: risk.id || crypto.randomUUID(),
-    title: risk.title || "Untitled risk",
+    title,
+    statement,
     summary:
       risk.so_what ||
       risk.description_plain ||
@@ -614,6 +1118,8 @@ function normalizeRisk(risk, domainKey) {
     certainty,
     domainKey: domainKey || guessDomainKey(category),
     sources: dedupeSources(risk.sources || []),
+    impactAreas,
+    jurisdiction: risk.jurisdiction || "Unknown",
     searchText: [
       risk.title,
       risk.so_what,
@@ -628,6 +1134,102 @@ function normalizeRisk(risk, domainKey) {
       .join(" ")
       .toLowerCase(),
   };
+}
+
+function getRiskStatement(risk, title, category) {
+  const haystack = [title, category, risk.so_what, risk.description_plain, risk.description]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  const statements = {
+    "npl site": "Environmental remediation obligations may increase development costs",
+    "groundwater monitoring": "Existing monitoring wells may restrict construction activities",
+    "contamination migration": "Potential contaminant migration may require additional environmental review",
+    "superfund": "Proximity to contaminated sites may trigger additional regulatory oversight",
+    "wetland": "Wetland constraints may limit buildable area and require permitting",
+    "protected habitat": "Protected species habitat may restrict development activities and timelines",
+    "flood zone": "Flood risk may require elevated construction and impact insurability",
+    "seismic": "Seismic activity may require specialized foundation design",
+    "radon": "Radon exposure may require mitigation and ongoing monitoring",
+    "zoning variance": "Requested zoning variance may face community opposition or approval delays",
+    "permit": "Required permits may introduce schedule risk and approval uncertainty",
+    "utility connection": "Utility infrastructure constraints may require costly extensions or upgrades",
+    "power capacity": "Electrical capacity upgrades may be required and create schedule risk",
+    "water allocation": "Water allocation limits may restrict operational demands",
+    "connectivity": "Limited fiber or network infrastructure may affect operational efficiency",
+    "environmental remediation": "Active remediation requirements may create operational and cost impacts",
+    "asbestos": "Asbestos abatement may be required before demolition or renovation",
+    "lead": "Lead remediation or containment may be required during construction",
+    "mold": "Mold remediation may delay occupancy or increase construction scope",
+    "adjacent property": "Conditions on adjacent properties may affect development feasibility",
+    "noise": "Noise restrictions may limit operational hours or require mitigation",
+    "air quality": "Air quality standards may require operational controls or monitoring",
+    "market": "Market conditions may affect project viability or investment returns",
+    "financing": "Financing challenges may constrain project delivery or scope",
+  };
+
+  for (const [pattern, statement] of Object.entries(statements)) {
+    if (haystack.includes(pattern)) {
+      return statement;
+    }
+  }
+
+  return title;
+}
+
+function getImpactAreas(risk, title, category) {
+  const haystack = [title, category, risk.so_what, risk.description_plain, risk.description]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  const impacts = new Set();
+
+  if (/contamination|remediation|environmental|asbestos|lead|mold|hazardous/.test(haystack)) {
+    impacts.add("Cost");
+    impacts.add("Schedule");
+    impacts.add("Permitting");
+  }
+
+  if (/wetland|habitat|species|protected|preserve|ecological/.test(haystack)) {
+    impacts.add("Buildability");
+    impacts.add("Permitting");
+    impacts.add("Schedule");
+  }
+
+  if (/flood|seismic|earthquake|hazard|climate|storm|wildfire/.test(haystack)) {
+    impacts.add("Cost");
+    impacts.add("Buildability");
+    impacts.add("Operations");
+  }
+
+  if (/zoning|variance|permit|approval|entitlement|hearing/.test(haystack)) {
+    impacts.add("Schedule");
+    impacts.add("Permitting");
+  }
+
+  if (/utility|power|energy|water|wastewater|infrastructure|fiber/.test(haystack)) {
+    impacts.add("Cost");
+    impacts.add("Operations");
+    impacts.add("Schedule");
+  }
+
+  if (/noise|air|traffic|community|stakeholder|opposition/.test(haystack)) {
+    impacts.add("Schedule");
+    impacts.add("Permitting");
+  }
+
+  if (/financial|tax|cost|budget|financing|insurance/.test(haystack)) {
+    impacts.add("Cost");
+  }
+
+  if (impacts.size === 0) {
+    impacts.add("Cost");
+    impacts.add("Schedule");
+  }
+
+  return Array.from(impacts).sort();
 }
 
 function getSeverity(risk) {
@@ -902,73 +1504,291 @@ function dedupeSources(sources) {
 }
 
 function getSummaryRisks(site) {
-  const flagged = site.allDomainRisks.filter((risk) => isFlaggedRisk(risk.id));
-  const merged = [...flagged, ...site.risks];
-  const seen = new Set();
-  return merged
-    .filter((risk) => {
-      if (seen.has(risk.id)) return false;
-      seen.add(risk.id);
-      return true;
-    })
-    .sort((a, b) => Number(isFlaggedRisk(b.id)) - Number(isFlaggedRisk(a.id)));
+  return sortFullRisks(
+    site.allDomainRisks.filter((risk) => isPromotedRisk(risk.id))
+  );
+}
+
+function selectDefaultPromotedRiskIds(site, targetCount = 15) {
+  const highRisks = site.allDomainRisks.filter((risk) => risk.severity === "High");
+  const grouped = new Map();
+
+  highRisks.forEach((risk) => {
+    const key = risk.domainKey || "other";
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+    }
+    grouped.get(key).push(risk);
+  });
+
+  [...grouped.values()].forEach((bucket) => shuffleInPlace(bucket));
+
+  const categoryKeys = shuffleArray([...grouped.keys()]);
+  const selected = [];
+  const selectedIds = new Set();
+  let addedInRound = true;
+
+  while (selected.length < targetCount && addedInRound) {
+    addedInRound = false;
+    categoryKeys.forEach((key) => {
+      if (selected.length >= targetCount) {
+        return;
+      }
+      const bucket = grouped.get(key) || [];
+      const next = bucket.find((risk) => !selectedIds.has(risk.id));
+      if (next) {
+        selected.push(next.id);
+        selectedIds.add(next.id);
+        addedInRound = true;
+      }
+    });
+  }
+
+  if (selected.length < targetCount) {
+    const remaining = shuffleArray(
+      site.allDomainRisks.filter((risk) => !selectedIds.has(risk.id))
+    );
+    remaining.forEach((risk) => {
+      if (selected.length < targetCount) {
+        selected.push(risk.id);
+        selectedIds.add(risk.id);
+      }
+    });
+  }
+
+  return selected;
 }
 
 function renderFullRiskMarkup(risk) {
   const note = getRiskNote(risk.id);
   const noteEditorOpen = state.activeNoteRiskId === risk.id;
+  const impactIcons = {
+    cost: '<svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/></svg>',
+    schedule: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+    permitting: '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
+    buildability: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/></svg>',
+    operations: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6m7-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M5 10a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/></svg>',
+    utilities: '<svg viewBox="0 0 24 24"><path d="M6 9h12M6 9L4 20h16l-2-11M6 9l1-4h6v-1h-6l-1 5h12l1-5h-6v1h6l1-4H7l-1 4z"/></svg>',
+  };
+
+  const impactTags = (risk.impactAreas || [])
+    .map((area) => {
+      const className = area.toLowerCase().replace(/\s+/g, "");
+      const icon = impactIcons[className] || '';
+      return `<span class="impact-tag ${className}"><span class="impact-tag-icon">${icon}</span>${area}</span>`;
+    })
+    .join("");
+
+  const isListView = state.fullRiskView === "list";
+
+  if (isListView) {
+    return renderFullRiskDetailedView(risk, impactTags);
+  } else {
+    return renderFullRiskCompactView(risk, impactTags);
+  }
+}
+
+function renderFullRiskDetailedView(risk, impactTags) {
+  const note = getRiskNote(risk.id);
+  const noteEditorOpen = state.activeNoteRiskId === risk.id;
+
   return `
-    <article class="full-risk-row" id="risk-${risk.id}" data-risk-id="${risk.id}">
+    <article class="full-risk-row full-risk-detailed" id="risk-${risk.id}" data-risk-id="${risk.id}">
       <div class="full-risk-top">
         <div class="full-risk-actions">
-          <button class="flag-button ${isFlaggedRisk(risk.id) ? "is-active" : ""}" type="button" data-flag-risk="${risk.id}" aria-label="Flag risk">
+          <button
+            class="flag-button ${isPromotedRisk(risk.id) ? "is-active" : ""}"
+            type="button"
+            data-flag-risk="${risk.id}"
+            aria-label="${getPromoteActionLabel(risk.id)}"
+            data-promote-label="${getPromoteActionLabel(risk.id)}"
+          >
             ${renderFlagIcon()}
           </button>
           <button
-            class="note-button ${note ? "has-note" : ""} ${noteEditorOpen ? "is-open" : ""}"
+            class="bookmark-button ${isBookmarkedRisk(risk.id) ? "is-active" : ""}"
             type="button"
-            data-note-risk="${risk.id}"
-            aria-label="${note ? "Edit note" : "Add note"}"
-            title="${note ? escapeHtml(note) : "Add note"}"
+            data-bookmark-risk="${risk.id}"
+            aria-label="${getBookmarkActionLabel(risk.id)}"
+            data-bookmark-label="${getBookmarkActionLabel(risk.id)}"
           >
-            ${renderNoteIcon()}
+            ${renderBookmarkIcon()}
           </button>
+          ${noteEditorOpen ? `<div class="note-button-wrapper">
+            <button
+              class="note-button ${note ? "has-note" : ""} ${noteEditorOpen ? "is-open" : ""}"
+              type="button"
+              data-note-risk="${risk.id}"
+              aria-label="${note ? "Edit note" : "Add note"}"
+              ${note ? `data-note-content="${escapeHtml(note)}"` : ""}
+            >
+              ${renderNoteIcon()}
+            </button>
+            ${note ? `<div class="note-tooltip">${escapeHtml(note)}</div>` : ""}
+          </div>` : ""}
+          <div class="risk-more-menu">
+            <button class="more-button" type="button" data-more-menu="${risk.id}" aria-label="More options" aria-haspopup="menu">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+              </svg>
+            </button>
+            <div class="more-menu-dropdown" role="menu">
+              <button class="more-menu-item" type="button" data-edit-risk="${risk.id}" role="menuitem">Edit</button>
+              <button class="more-menu-item danger" type="button" data-delete-risk="${risk.id}" role="menuitem">Delete</button>
+            </div>
+          </div>
           ${noteEditorOpen ? renderNotePopover(risk.id) : ""}
         </div>
       </div>
       <div class="risk-metrics full-risk-metrics">
         <div class="metric-pair">
-          <span class="severity-badge ${risk.severity.toLowerCase()}">${risk.severity}</span>
+          <button class="severity-badge ${risk.severity.toLowerCase()}" type="button" data-change-severity="${risk.id}">
+            ${risk.severity}
+          </button>
         </div>
         <div class="metric-pair certainty-pair">
           <span class="metric-label">Certainty:</span>
           <span class="certainty-badge">${risk.certainty}%</span>
         </div>
+        <div class="metric-pair">
+          <span class="metric-label">Jurisdiction:</span>
+          <span class="metric-value">${risk.jurisdiction || "Unknown"}</span>
+        </div>
       </div>
-      <h5>${risk.title}</h5>
+      <h5 class="risk-statement">${risk.statement}</h5>
       <p class="full-risk-text">${risk.summary}</p>
-      <a class="text-link" href="${risk.sources[0]?.url || "#"}" target="_blank" rel="noreferrer noopener">Sources (${risk.sources.length})</a>
+      ${impactTags ? `<div class="impact-tags"><span class="impact-label">Impact</span>${impactTags}</div>` : ""}
+      <div class="risk-card-footer">
+        <a class="text-link" href="${risk.sources[0]?.url || "#"}" target="_blank" rel="noreferrer noopener">Sources (${risk.sources.length})</a>
+        <button class="text-link text-link-with-chevron" type="button" data-toggle-technical="${risk.id}">
+          Show technical details
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="chevron-icon">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+      </div>
+      <div class="technical-details" data-technical-details="${risk.id}" style="display: none;">
+        <div class="technical-section">
+          <h6>Technical Finding</h6>
+          <p>${escapeHtml(risk.title)}</p>
+        </div>
+        ${risk.sources && risk.sources.length > 0 ? `
+          <div class="technical-section">
+            <h6>Evidence</h6>
+            <ul class="technical-sources">
+              ${risk.sources.map((s) => `<li><a href="${s.url}" target="_blank" rel="noreferrer noopener">${escapeHtml(s.title || s.url)}</a></li>`).join("")}
+            </ul>
+          </div>
+        ` : ""}
+      </div>
     </article>
   `;
 }
 
-function isFlaggedRisk(riskId) {
-  return state.flaggedRiskIds.includes(riskId);
+function renderFullRiskCompactView(risk, impactTags) {
+  return `
+    <article class="full-risk-row full-risk-compact" id="risk-${risk.id}" data-risk-id="${risk.id}">
+      <div class="full-risk-top">
+        <div class="full-risk-header">
+          <div class="full-risk-header-left">
+            <span class="severity-badge ${risk.severity.toLowerCase()}" type="button" data-change-severity="${risk.id}" style="cursor: pointer;">
+              ${risk.severity}
+            </span>
+          </div>
+          <div class="full-risk-header-center">
+            <h5 class="risk-statement-compact">${risk.statement}</h5>
+          </div>
+          <div class="full-risk-header-right">
+            <span class="metric-label">Jurisdiction:</span>
+            <span class="metric-value">${risk.jurisdiction || "Unknown"}</span>
+          </div>
+        </div>
+        <div class="full-risk-actions">
+          <button
+            class="flag-button ${isPromotedRisk(risk.id) ? "is-active" : ""}"
+            type="button"
+            data-flag-risk="${risk.id}"
+            aria-label="${getPromoteActionLabel(risk.id)}"
+            data-promote-label="${getPromoteActionLabel(risk.id)}"
+          >
+            ${renderFlagIcon()}
+          </button>
+          <button
+            class="bookmark-button ${isBookmarkedRisk(risk.id) ? "is-active" : ""}"
+            type="button"
+            data-bookmark-risk="${risk.id}"
+            aria-label="${getBookmarkActionLabel(risk.id)}"
+            data-bookmark-label="${getBookmarkActionLabel(risk.id)}"
+          >
+            ${renderBookmarkIcon()}
+          </button>
+          <div class="risk-more-menu">
+            <button class="more-button" type="button" data-more-menu="${risk.id}" aria-label="More options" aria-haspopup="menu">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+              </svg>
+            </button>
+            <div class="more-menu-dropdown" role="menu">
+              <button class="more-menu-item" type="button" data-edit-risk="${risk.id}" role="menuitem">Edit</button>
+              <button class="more-menu-item danger" type="button" data-delete-risk="${risk.id}" role="menuitem">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+  `;
 }
 
-function toggleFlagRisk(riskId) {
-  state.flaggedRiskIds = isFlaggedRisk(riskId)
-    ? state.flaggedRiskIds.filter((id) => id !== riskId)
-    : [...state.flaggedRiskIds, riskId];
+function isPromotedRisk(riskId) {
+  return state.promotedRiskIds.includes(riskId);
+}
+
+function togglePromotedRisk(riskId) {
+  state.promotedRiskIds = isPromotedRisk(riskId)
+    ? state.promotedRiskIds.filter((id) => id !== riskId)
+    : [...state.promotedRiskIds, riskId];
 }
 
 function renderFlagIcon() {
   return `
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 3v18"></path>
-      <path d="M6 4h9l-1.8 3 1.8 3H6"></path>
+      <path d="M15 4.5a3.5 3.5 0 0 0-6 2.47c0 .72.22 1.42.64 2.01L12 12l2.36-3.02c.41-.59.64-1.29.64-2.01A3.5 3.5 0 0 0 15 4.5Z"></path>
+      <path d="M12 12v8"></path>
+      <path d="M9 20h6"></path>
     </svg>
   `;
+}
+
+function renderBookmarkIcon() {
+  return `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 4.5h10a1.5 1.5 0 0 1 1.5 1.5V20l-6.5-3.8L5.5 20V6A1.5 1.5 0 0 1 7 4.5Z"></path>
+    </svg>
+  `;
+}
+
+function getPromoteActionLabel(riskId) {
+  return isPromotedRisk(riskId)
+    ? "Remove from Risk Register"
+    : "Promote to Risk Register";
+}
+
+function isBookmarkedRisk(riskId) {
+  return state.bookmarkedRiskIds.includes(riskId);
+}
+
+function toggleBookmarkedRisk(riskId) {
+  state.bookmarkedRiskIds = isBookmarkedRisk(riskId)
+    ? state.bookmarkedRiskIds.filter((id) => id !== riskId)
+    : [...state.bookmarkedRiskIds, riskId];
+}
+
+function getBookmarkActionLabel(riskId) {
+  return isBookmarkedRisk(riskId) ? "Saved for later" : "Save for later";
 }
 
 function renderNoteIcon() {
@@ -977,6 +1797,65 @@ function renderNoteIcon() {
       <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v6A2.5 2.5 0 0 1 16.5 15H10l-4 4v-4.5A2.5 2.5 0 0 1 5 12z"></path>
     </svg>
   `;
+}
+
+function renderBookmarksPopover(site) {
+  if (state.bookmarkedRiskIds.length === 0) {
+    return `
+      <div class="bookmarks-popover-empty">
+        <p>No bookmarked risks yet.</p>
+        <p class="bookmarks-empty-hint">Bookmark risks during your review to quickly revisit important findings.</p>
+      </div>
+    `;
+  }
+
+  const bookmarkedRisks = site.allDomainRisks.filter((risk) =>
+    state.bookmarkedRiskIds.includes(risk.id)
+  );
+
+  const grouped = {
+    High: [],
+    Medium: [],
+    Low: [],
+  };
+
+  bookmarkedRisks.forEach((risk) => {
+    const severity = risk.severity || "Low";
+    if (grouped[severity]) {
+      grouped[severity].push(risk);
+    }
+  });
+
+  let html = `<div class="bookmarks-popover-content">
+    <div class="bookmarks-header">
+      <h4>Bookmarks</h4>
+      <span class="bookmarks-count">${state.bookmarkedRiskIds.length}</span>
+    </div>
+    <div class="bookmarks-list">`;
+
+  ["High", "Medium", "Low"].forEach((severity) => {
+    grouped[severity].forEach((risk) => {
+      html += `
+        <div class="bookmark-item" data-bookmark-item="${risk.id}">
+          <div class="bookmark-item-header">
+            <span class="bookmark-title">${escapeHtml(risk.statement || risk.title)}</span>
+            <button class="bookmark-remove" type="button" data-remove-bookmark="${risk.id}" aria-label="Remove bookmark">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="bookmark-meta">
+            <span class="bookmark-severity bookmark-severity-${severity.toLowerCase()}">${severity}</span>
+            <span class="bookmark-category">${risk.domainKey || "Unknown"}</span>
+          </div>
+        </div>
+      `;
+    });
+  });
+
+  html += `</div></div>`;
+  return html;
 }
 
 function renderNotePopover(riskId) {
@@ -996,16 +1875,42 @@ function renderNotePopover(riskId) {
 }
 
 function wireRiskInteractions(container) {
+  [...container.querySelectorAll("[data-more-menu]")].forEach((button) => {
+    button.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const dropdown = button.nextElementSibling;
+      if (dropdown?.classList.contains("more-menu-dropdown")) {
+        dropdown.classList.toggle("is-open");
+      }
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    [...document.querySelectorAll(".more-menu-dropdown.is-open")].forEach((dropdown) => {
+      if (!dropdown.parentElement.contains(e.target)) {
+        dropdown.classList.remove("is-open");
+      }
+    });
+  });
+
   [...container.querySelectorAll("[data-flag-risk]")].forEach((button) => {
     button.addEventListener("click", () => {
       const riskId = button.dataset.flagRisk;
-      const nextFlagged = !isFlaggedRisk(riskId);
-      toggleFlagRisk(riskId);
+      const nextPromoted = !isPromotedRisk(riskId);
+      togglePromotedRisk(riskId);
       showToast(
-        nextFlagged
-          ? "Risk added to Summary Evaluation."
-          : "Risk removed from Summary Evaluation."
+        nextPromoted
+          ? "Risk promoted to the Risk Register and added to Summary Evaluation."
+          : "Risk removed from the Risk Register and Summary Evaluation."
       );
+      render();
+    });
+  });
+
+  [...container.querySelectorAll("[data-bookmark-risk]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const riskId = button.dataset.bookmarkRisk;
+      toggleBookmarkedRisk(riskId);
       render();
     });
   });
@@ -1040,6 +1945,77 @@ function wireRiskInteractions(container) {
       const textarea = editor?.querySelector("textarea");
       setRiskNote(riskId, textarea?.value || "");
       state.activeNoteRiskId = null;
+      render();
+    });
+  });
+
+  [...container.querySelectorAll("[data-edit-risk]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const riskId = button.dataset.editRisk;
+      showToast("Edit risk feature coming soon");
+      // TODO: Implement edit risk functionality
+    });
+  });
+
+  [...container.querySelectorAll("[data-delete-risk]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const riskId = button.dataset.deleteRisk;
+      if (confirm("Are you sure you want to delete this risk?")) {
+        // TODO: Implement delete risk functionality
+        showToast("Risk deleted");
+        render();
+      }
+    });
+  });
+}
+
+function wireVerdictEditor(site) {
+  const editButton = elements.summaryPanel?.querySelector("[data-edit-verdict]");
+  const cancelButton = elements.summaryPanel?.querySelector("[data-verdict-cancel]");
+  const saveButton = elements.summaryPanel?.querySelector("[data-verdict-save]");
+  const revertButton = elements.summaryPanel?.querySelector("[data-revert-verdict]");
+
+  if (editButton) {
+    editButton.addEventListener("click", () => {
+      state.editingSiteVerdictId = site.id;
+      render();
+    });
+  }
+
+  if (cancelButton) {
+    cancelButton.addEventListener("click", () => {
+      state.editingSiteVerdictId = null;
+      render();
+    });
+  }
+
+  if (saveButton) {
+    saveButton.addEventListener("click", () => {
+      const editor = elements.summaryPanel?.querySelector("[data-verdict-editor]");
+      const textarea = editor?.querySelector("textarea");
+      if (textarea) {
+        state.editedSiteVerdict[site.id] = textarea.value.trim();
+        state.editedVerdictStatus[site.id] = "edited";
+      }
+      state.editingSiteVerdictId = null;
+      render();
+    });
+  }
+
+  if (revertButton) {
+    revertButton.addEventListener("click", () => {
+      delete state.editedSiteVerdict[site.id];
+      delete state.editedVerdictStatus[site.id];
+      render();
+    });
+  }
+}
+
+function wireTemperatureProfileToggle(container) {
+  [...container.querySelectorAll("[data-toggle-temp-profile]")].forEach((button) => {
+    button.addEventListener("click", () => {
+      const domainKey = button.dataset.toggleTempProfile;
+      state.temperatureProfileHidden[domainKey] = !state.temperatureProfileHidden[domainKey];
       render();
     });
   });
@@ -1125,11 +2101,25 @@ function setRiskNote(riskId, value) {
 function sortFullRisks(risks) {
   return [...risks].sort(
     (a, b) =>
-      Number(isFlaggedRisk(b.id)) - Number(isFlaggedRisk(a.id)) ||
+      Number(isPromotedRisk(b.id)) - Number(isPromotedRisk(a.id)) ||
       getSeverityRank(b.severity) - getSeverityRank(a.severity) ||
       Number(b.certainty || 0) - Number(a.certainty || 0) ||
       a.title.localeCompare(b.title)
   );
+}
+
+function shuffleArray(items) {
+  const copy = [...items];
+  shuffleInPlace(copy);
+  return copy;
+}
+
+function shuffleInPlace(items) {
+  for (let i = items.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
 }
 
 function getSeverityRank(severity) {
@@ -1181,4 +2171,50 @@ function titleCase(value) {
   return String(value)
     .replace(/[_-]+/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function renderReturnButton() {
+  let button = document.querySelector("#returnToPreviousView");
+
+  if (!state.previousView) {
+    if (button) button.remove();
+    return;
+  }
+
+  if (!button) {
+    button = document.createElement("button");
+    button.id = "returnToPreviousView";
+    button.className = "return-button";
+    button.setAttribute("aria-label", "Return to previous view");
+    document.body.appendChild(button);
+    button.addEventListener("click", returnToPreviousView);
+  }
+
+  const viewLabel = state.previousView.tab === "summary" ? "Summary Evaluation" : "Map";
+  button.innerHTML = `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    <span>Back to ${viewLabel}</span>
+  `;
+}
+
+function returnToPreviousView() {
+  if (!state.previousView) return;
+
+  state.tab = state.previousView.tab;
+  state.summaryRiskView = state.previousView.summaryRiskView || "grid";
+  state.focusDomain = null;
+  state.focusRisk = null;
+  const scrollPos = state.previousView.scrollPosition;
+  state.previousView = null;
+
+  render();
+
+  requestAnimationFrame(() => {
+    const panel = state.tab === "summary" ? elements.summaryPanel : elements.mapPanel;
+    if (panel) {
+      panel.scrollTop = scrollPos;
+    }
+  });
 }
